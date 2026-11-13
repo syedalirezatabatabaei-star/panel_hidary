@@ -1,4 +1,4 @@
-from fastapi import FastAPI,Depends,HTTPException
+from fastapi import FastAPI,Depends,HTTPException,UploadFile,File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel,Field
@@ -6,8 +6,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from .config import settings
 from .database import Base,engine,SessionLocal,get_db
-from .models import User,PagePermission,CoinTransaction
+from .models import User,PagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction
 from .security import hash_password,verify_password,create_access_token,current_user
+from datetime import datetime
+from decimal import Decimal
 app=FastAPI(title="Hidary Admin API",version="1.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=settings.allowed_origins,allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 PAGES={"dashboard":"داشبورد","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت توکن"}
@@ -105,3 +107,152 @@ def adjust(data:CoinChange,actor:User=Depends(require_page("coins",True)),db:Ses
         db.add(CoinTransaction(user_id=u.id,actor_id=actor.id,amount=data.amount,balance_after=balance,reason=data.reason,reference=data.reference))
         db.commit(); return {"success":True,"balance":balance}
     except Exception: db.rollback(); raise
+
+
+# Wallet and system configuration
+def setting(db, key, default=""):
+    row=db.get(SystemSetting,key)
+    return row.value if row else default
+
+def set_setting(db,key,value):
+    row=db.get(SystemSetting,key)
+    if not row: row=SystemSetting(key=key,value=str(value)); db.add(row)
+    else: row.value=str(value)
+
+def wallet_for(db,user_id):
+    row=db.query(WalletAccount).filter_by(user_id=user_id).with_for_update().one_or_none()
+    if not row:
+        row=WalletAccount(user_id=user_id,balance_irr=0); db.add(row); db.flush()
+    return row
+
+def wallet_admin(user:User=Depends(current_user)):
+    if user.role!="admin": raise HTTPException(403,"فقط مدیر کل می‌تواند این عملیات را انجام دهد")
+    return user
+
+class WalletRequestInput(BaseModel):
+    currency:str
+    amount:Decimal=Field(gt=0)
+class WalletWithdrawInput(BaseModel):
+    amount_irr:Decimal=Field(gt=0)
+    destination:str=Field(min_length=5,max_length=160)
+class WalletReviewInput(BaseModel):
+    action:str
+    reason:str|None=None
+class WalletConfigInput(BaseModel):
+    usd_irr_rate:Decimal=Field(gt=0)
+    bank_name:str=Field(max_length=120)
+    card_holder:str=Field(max_length=160)
+    card_number:str=Field(max_length=40)
+    iban:str=Field(default="",max_length=40)
+    bank_description:str=Field(default="",max_length=500)
+class SystemConfigInput(BaseModel):
+    site_title:str=Field(min_length=2,max_length=160)
+    support_email:str=""
+    support_phone:str=""
+    default_currency:str="IRR"
+
+@app.get("/api/wallet")
+def wallet_summary(user:User=Depends(current_user),db:Session=Depends(get_db)):
+    w=wallet_for(db,user.id)
+    rate=Decimal(setting(db,"usd_irr_rate","600000"))
+    return {"balance_irr":float(w.balance_irr),"balance_usd":float(w.balance_irr/rate),"usd_irr_rate":float(rate)}
+
+@app.get("/api/wallet/requests")
+def wallet_requests(user:User=Depends(current_user),db:Session=Depends(get_db)):
+    q=db.query(WalletRequest).order_by(WalletRequest.id.desc())
+    if user.role!="admin": q=q.filter(WalletRequest.user_id==user.id)
+    return [{"id":x.id,"user_id":x.user_id,"username":x.user.username,"full_name":x.user.full_name,
+      "currency":x.entered_currency,"entered_amount":float(x.entered_amount),"amount_irr":float(x.amount_irr),
+      "amount_usd":float(x.amount_usd),"status":x.status,"proof_filename":x.proof_filename,
+      "rejection_reason":x.rejection_reason,"created_at":x.created_at.isoformat(),"type":"deposit"} for x in q.all()]
+
+@app.post("/api/wallet/deposit-requests",status_code=201)
+def create_wallet_request(data:WalletRequestInput,user:User=Depends(current_user),db:Session=Depends(get_db)):
+    currency=data.currency.upper()
+    if currency not in ("IRR","USD"): raise HTTPException(400,"واحد پول نامعتبر است")
+    rate=Decimal(setting(db,"usd_irr_rate","600000"))
+    amount_irr=data.amount if currency=="IRR" else data.amount*rate
+    amount_usd=data.amount if currency=="USD" else data.amount/rate
+    row=WalletRequest(user_id=user.id,entered_currency=currency,entered_amount=data.amount,amount_irr=amount_irr,amount_usd=amount_usd,fx_rate=rate,status="awaiting_payment")
+    db.add(row);db.commit();db.refresh(row)
+    return {"id":row.id,"amount_irr":float(amount_irr),"amount_usd":float(amount_usd),"status":row.status}
+
+@app.post("/api/wallet/deposit-requests/{request_id}/proof")
+async def upload_wallet_proof(request_id:int,file:UploadFile=File(...),user:User=Depends(current_user),db:Session=Depends(get_db)):
+    row=db.get(WalletRequest,request_id)
+    if not row or (row.user_id!=user.id and user.role!="admin"): raise HTTPException(404,"درخواست پیدا نشد")
+    if row.status not in ("awaiting_payment","pending"): raise HTTPException(400,"این درخواست در وضعیت قابل ارسال فیش نیست")
+    if file.content_type not in ("image/jpeg","image/png","image/webp","application/pdf"): raise HTTPException(400,"فقط تصویر یا PDF مجاز است")
+    data=await file.read()
+    if len(data)>5*1024*1024: raise HTTPException(400,"حداکثر حجم فیش ۵ مگابایت است")
+    row.proof_filename=file.filename[:255];row.proof_content_type=file.content_type;row.proof_data=data;row.status="pending"
+    db.commit();return {"success":True,"status":"pending"}
+
+@app.get("/api/wallet/deposit-requests/{request_id}/proof")
+def get_wallet_proof(request_id:int,user:User=Depends(current_user),db:Session=Depends(get_db)):
+    from fastapi.responses import Response
+    row=db.get(WalletRequest,request_id)
+    if not row or not row.proof_data or (row.user_id!=user.id and user.role!="admin"): raise HTTPException(404,"فیش پیدا نشد")
+    return Response(content=row.proof_data,media_type=row.proof_content_type,headers={"Content-Disposition":'inline; filename="'+(row.proof_filename or "proof")+'"'})
+
+@app.post("/api/wallet/withdrawals",status_code=201)
+def create_withdrawal(data:WalletWithdrawInput,user:User=Depends(current_user),db:Session=Depends(get_db)):
+    w=wallet_for(db,user.id)
+    amount=Decimal(data.amount_irr)
+    if Decimal(w.balance_irr)<amount: raise HTTPException(400,"موجودی کیف پول کافی نیست")
+    row=WalletTransaction(user_id=user.id,actor_id=user.id,transaction_type="withdrawal_pending",amount_irr=-amount,balance_after_irr=w.balance_irr,description="درخواست برداشت: "+data.destination)
+    db.add(row);db.commit();db.refresh(row)
+    return {"id":row.id,"status":"pending"}
+
+@app.get("/api/wallet/withdrawals")
+def list_withdrawals(user:User=Depends(current_user),db:Session=Depends(get_db)):
+    q=db.query(WalletTransaction).filter(WalletTransaction.transaction_type.in_(["withdrawal_pending","withdrawal_approved","withdrawal_rejected"])).order_by(WalletTransaction.id.desc())
+    if user.role!="admin": q=q.filter(WalletTransaction.user_id==user.id)
+    return [{"id":x.id,"user_id":x.user_id,"username":x.user.username,"amount_irr":float(abs(x.amount_irr)),"status":x.transaction_type,"description":x.description,"created_at":x.created_at.isoformat()} for x in q.all()]
+
+@app.post("/api/wallet/deposit-requests/{request_id}/review")
+def review_wallet_request(request_id:int,data:WalletReviewInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
+    row=db.get(WalletRequest,request_id)
+    if not row: raise HTTPException(404,"درخواست پیدا نشد")
+    if row.status!="pending": raise HTTPException(400,"این درخواست قبلاً بررسی شده یا فیش ندارد")
+    if data.action not in ("approve","reject"): raise HTTPException(400,"عملیات نامعتبر است")
+    row.status="approved" if data.action=="approve" else "rejected"
+    row.rejection_reason=(data.reason or "")[:500] if data.action=="reject" else None
+    row.reviewed_by=actor.id;row.reviewed_at=datetime.utcnow()
+    if data.action=="approve":
+        w=wallet_for(db,row.user_id);w.balance_irr=Decimal(w.balance_irr)+Decimal(row.amount_irr)
+        db.add(WalletTransaction(user_id=row.user_id,actor_id=actor.id,transaction_type="deposit",amount_irr=row.amount_irr,balance_after_irr=w.balance_irr,description="تأیید افزایش موجودی #"+str(row.id),request_id=row.id))
+    db.commit();return {"success":True,"status":row.status}
+
+@app.post("/api/wallet/withdrawals/{transaction_id}/review")
+def review_withdrawal(transaction_id:int,data:WalletReviewInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
+    row=db.get(WalletTransaction,transaction_id)
+    if not row or row.transaction_type!="withdrawal_pending": raise HTTPException(404,"درخواست برداشت پیدا نشد")
+    if data.action not in ("approve","reject"): raise HTTPException(400,"عملیات نامعتبر است")
+    w=wallet_for(db,row.user_id)
+    if data.action=="approve":
+        amount=abs(Decimal(row.amount_irr))
+        if Decimal(w.balance_irr)<amount: raise HTTPException(400,"موجودی کیف پول دیگر کافی نیست")
+        w.balance_irr=Decimal(w.balance_irr)-amount
+        row.transaction_type="withdrawal_approved";row.balance_after_irr=w.balance_irr
+    else:
+        row.transaction_type="withdrawal_rejected";row.description += " | رد: "+(data.reason or "")[:300]
+    db.commit();return {"success":True}
+
+@app.get("/api/wallet/config")
+def get_wallet_config(user:User=Depends(current_user),db:Session=Depends(get_db)):
+    return {"usd_irr_rate":setting(db,"usd_irr_rate","600000"),"bank_name":setting(db,"bank_name","بانک"),"card_holder":setting(db,"card_holder","نام صاحب کارت"),"card_number":setting(db,"card_number","0000-0000-0000-0000"),"iban":setting(db,"iban",""),"bank_description":setting(db,"bank_description","")}
+
+@app.put("/api/wallet/config")
+def update_wallet_config(data:WalletConfigInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
+    for k,v in data.model_dump().items(): set_setting(db,k,v)
+    db.commit();return {"success":True}
+
+@app.get("/api/system/config")
+def get_system_config(user:User=Depends(current_user),db:Session=Depends(get_db)):
+    return {"site_title":setting(db,"site_title","پنل مدیریت حیدری"),"support_email":setting(db,"support_email",""),"support_phone":setting(db,"support_phone",""),"default_currency":setting(db,"default_currency","IRR")}
+
+@app.put("/api/system/config")
+def update_system_config(data:SystemConfigInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
+    for k,v in data.model_dump().items(): set_setting(db,k,v)
+    db.commit();return {"success":True}

@@ -1358,3 +1358,32 @@ body.dashboard-layout *{
 .dashboard-layout .product-kpi:hover .stat-link-arrow,.dashboard-layout .stat-card-link:hover .stat-link-arrow{transform:translateX(-3px)}
 .dashboard-layout.theme-dark .product-kpi-link,.dashboard-layout.theme-dark .stat-card-link{color:#c4d9ca}
 @media(max-width:650px){.dashboard-layout .dashboard-kpis .stat-copy>span{font-size:13px!important}.dashboard-layout .dashboard-kpis .stat-copy strong{font-size:23px!important}.dashboard-layout .dashboard-kpis .stat-copy small,.dashboard-layout .dashboard-kpis .stat-card-link{font-size:12px!important}}
+
+/* Settings and wallet experience */
+.sidebar-brand{justify-content:center;transform:translateX(-7px)}
+.sidebar-brand .sidebar-logo{margin-left:8px}
+.settings-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.settings-tile{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:22px;border:1px solid #e2e8e3;border-radius:16px;background:#fff;color:inherit;text-align:right;cursor:pointer;box-shadow:0 4px 18px rgba(20,40,30,.04);font:inherit;transition:transform .18s,border-color .18s}
+.settings-tile:hover{transform:translateY(-3px);border-color:#78977f}
+.settings-tile>span{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:#edf2f7;color:#456b8c;font-size:23px}
+.settings-tile b{font-size:17px;font-weight:800}
+.settings-tile small{font-size:13px;color:#65716a}
+.wallet-summary{margin-bottom:18px}
+.wallet-panel{margin-bottom:18px}
+.wallet-request-form label,.form-grid label{display:flex;flex-direction:column;gap:7px;font-weight:700;font-size:13px}
+.wallet-request-form input,.wallet-request-form select,.form-grid label input,.form-grid label select{width:100%}
+.bank-payment-panel{margin-top:22px;padding:18px;border:1px dashed #91aa99;border-radius:16px;background:rgba(237,244,239,.5)}
+.bank-card-visual{max-width:420px;min-height:220px;padding:22px;border-radius:18px;background:linear-gradient(135deg,#234a3b,#527864);color:#fff;display:flex;flex-direction:column;justify-content:space-between;gap:20px;box-shadow:0 12px 28px rgba(22,55,39,.22);direction:rtl}
+.bank-card-chip{font-size:26px}
+.bank-card-visual>strong{font-size:22px;letter-spacing:2px;direction:ltr;text-align:right}
+.bank-card-visual>div{display:flex;justify-content:space-between;gap:12px;font-size:13px}
+.bank-card-visual small{font-size:12px;opacity:.9}
+.bank-payment-panel>p{margin:14px 0;color:#4f5f55;font-size:13px}
+.wallet-panel .panel-heading,.wallet-summary .stat-card{margin-bottom:0}
+#systemConfigForm,#walletConfigForm{margin-top:18px}
+.dashboard-layout.theme-dark .settings-tile{background:#1b2520;border-color:#36483c;color:#e5eee7}
+.dashboard-layout.theme-dark .settings-tile small{color:#b5c2b8}
+.dashboard-layout.theme-dark .bank-payment-panel{background:#1b2921;border-color:#536e5c}
+.dashboard-layout.theme-dark .bank-payment-panel>p{color:#d3dfd6}
+@media(max-width:850px){.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.settings-grid{grid-template-columns:1fr}.bank-card-visual{min-height:190px;padding:17px}.bank-card-visual>strong{font-size:17px}.wallet-request-form{grid-template-columns:1fr}}

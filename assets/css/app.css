@@ -136,3 +136,40 @@
     transform:scale(1.01);
   }
 }
+
+/* Login contrast and accessible password visibility control */
+.login-v12-kicker,
+.login-v12-card h1,
+.login-v12-subtitle,
+.login-v12-footer{
+  color:#171717;
+}
+.login-v12-submit{color:#fff;}
+.login-v12-password .password-visibility{
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  display:grid;
+  place-items:center;
+  padding:5px;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:#555;
+  cursor:pointer;
+  transition:background-color .18s,color .18s;
+}
+.login-v12-password .password-visibility:hover{
+  background:#f0f0f0;
+  color:#111;
+}
+.password-visibility .eye-icon{
+  width:20px;
+  height:20px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.password-visibility .eye-icon[hidden]{display:none;}

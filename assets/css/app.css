@@ -1412,3 +1412,20 @@ body.dashboard-layout *{
 .dashboard-nav .settings-subnav{display:grid;gap:5px;margin:2px 10px 9px 0;padding:7px 10px 7px 0;border-right:2px solid var(--dash-line)}
 .dashboard-nav .settings-subnav a{min-height:38px;padding:8px 10px;font-size:13px;background:transparent}
 .dashboard-nav .settings-subnav a.active{background:var(--dash-active,var(--dash-line))}
+
+/* Settings submenu expands directly below the Settings navigation item */
+.dashboard-layout #sideNav a[data-page="settings"]{display:flex;align-items:center;gap:10px}
+.dashboard-layout #sideNav a[data-page="settings"] .settings-chevron{margin-right:auto;font-size:19px;line-height:1;transition:transform .18s ease}
+.dashboard-layout #sideNav a[data-page="settings"].submenu-open .settings-chevron{transform:rotate(180deg)}
+.dashboard-layout #sideNav .settings-subnav{display:grid;gap:5px;margin:0 8px 8px 0;padding:7px 10px 7px 0;border-right:1px solid rgba(125,151,176,.35)}
+.dashboard-layout #sideNav .settings-subnav.hidden{display:none!important}
+.dashboard-layout #sideNav .settings-subnav a{min-height:42px;padding:9px 11px;font-size:13px;background:transparent}
+.dashboard-layout #sideNav .settings-subnav a:hover,
+.dashboard-layout #sideNav .settings-subnav a.active{background:rgba(103,135,165,.13)}
+.dashboard-layout:not(.theme-dark) #sideNav .settings-subnav a{color:#617187!important}
+.dashboard-layout:not(.theme-dark) #sideNav .settings-subnav a.active{color:#345878!important}
+/* RTL brand alignment: logo on the left, title and subtitle on the right */
+.dashboard-layout .sidebar-brand{direction:rtl;justify-content:flex-start;transform:none!important}
+.dashboard-layout .sidebar-brand-copy{order:0;flex:1;text-align:right}
+.dashboard-layout .sidebar-brand .sidebar-logo{order:1;margin:0!important;transform:translateX(-7px)!important}
+@media(max-width:650px){.dashboard-layout #sideNav .settings-subnav{margin-right:12px}}

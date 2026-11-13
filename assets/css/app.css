@@ -1397,3 +1397,10 @@ body.dashboard-layout *{
 .dashboard-layout .sidebar-brand .sidebar-logo{order:1;margin:0!important;transform:translateX(-7px)!important}
 .settings-tile>span img{width:22px;height:22px;object-fit:contain}
 .settings-tile>span{flex:0 0 42px}
+
+.withdrawal-request-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.withdrawal-request-card{padding:16px;border:1px solid #e2e8e3;border-radius:14px;background:var(--panel-bg,#fff);display:grid;gap:10px}
+.withdrawal-request-card>div:first-child{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.withdrawal-request-card small{display:block;color:#7b8794;font-size:11px}
+.withdrawal-request-card p{margin:0;color:var(--muted,#65716a);font-size:12px;line-height:1.8;overflow-wrap:anywhere}
+.withdrawal-request-actions{display:flex;gap:8px;flex-wrap:wrap}

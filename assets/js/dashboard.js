@@ -1,5 +1,29 @@
-let me=null;const labels={dashboard:"داشبورد",products:"لیست محصولات",addProduct:"افزودن محصول جدید",aiTokens:"توکن هوش مصنوعی",settings:"تنظیمات",reports:"گزارش‌ها",users:"کاربران",permissions:"نقش‌ها و دسترسی‌ها",coins:"مدیریت سکه"};function allowed(k){return me.role==="admin"||!!me.permissions[k]?.view}function canEdit(k){return me.role==="admin"||!!me.permissions[k]?.edit}function role(r){return ({admin:"مدیر کل",manager:"مدیر",user:"کاربر"})[r]||r}function page(k){if(!document.getElementById(k+"Page"))k="dashboard";if((["users","permissions","coins"].includes(k)&&!allowed(k))||(k==="reports"&&!allowed("coins")) ){toast("دسترسی ندارید");return}document.querySelectorAll(".page-section").forEach(x=>x.classList.add("hidden"));document.getElementById(k+"Page").classList.remove("hidden");document.getElementById("pageTitle").textContent=labels[k];document.querySelectorAll("#sideNav a").forEach(a=>a.classList.toggle("active",a.dataset.page===k));if(location.hash!=="#"+k)history.replaceState(null,"","#"+k);const loaders={dashboard,users,permissions,coins,reports};if(loaders[k])loaders[k]()}async function dashboard(){try{const d=await api.get("/api/dashboard");usersTotal.textContent=num(d.users_total);usersActive.textContent=num(d.users_active);coinsTotal.textContent=num(d.coins_total);coinsUsed.textContent=num(d.coins_used);recentTransactions.innerHTML=d.recent_transactions.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+esc(t.reason)+"</td><td>"+new Date(t.created_at).toLocaleDateString("fa-IR")+"</td></tr>").join("")}catch(e){toast(e.message)}}
+let me=null;const labels={dashboard:"داشبورد",products:"لیست محصولات",addProduct:"افزودن محصول جدید",aiTokens:"توکن هوش مصنوعی",settings:"تنظیمات",reports:"گزارش‌ها",users:"کاربران",permissions:"نقش‌ها و دسترسی‌ها",coins:"مدیریت سکه"};function allowed(k){return me.role==="admin"||!!me.permissions[k]?.view}function canEdit(k){return me.role==="admin"||!!me.permissions[k]?.edit}function role(r){return ({admin:"مدیر کل",manager:"مدیر",user:"کاربر"})[r]||r}function page(k){if(!document.getElementById(k+"Page"))k="dashboard";if((["users","permissions","coins"].includes(k)&&!allowed(k))||(k==="reports"&&!allowed("coins")) ){toast("دسترسی ندارید");return}document.querySelectorAll(".page-section").forEach(x=>x.classList.add("hidden"));document.getElementById(k+"Page").classList.remove("hidden");document.getElementById("pageTitle").textContent=labels[k];document.querySelectorAll("#sideNav a").forEach(a=>a.classList.toggle("active",a.dataset.page===k));if(location.hash!=="#"+k)history.replaceState(null,"","#"+k);const loaders={dashboard,users,permissions,coins,reports};if(loaders[k])loaders[k]()}async function dashboard(){
+ const status=document.getElementById("dashboardStatus");
+ if(status)status.textContent="در حال دریافت اطلاعات...";
+ try{
+  const d=await api.get("/api/dashboard");
+  usersTotal.textContent=num(d.users_total);
+  usersActive.textContent=num(d.users_active);
+  coinsTotal.textContent=num(d.coins_total);
+  coinsUsed.textContent=num(d.coins_used);
+  const rows=Array.isArray(d.recent_transactions)?d.recent_transactions:[];
+  recentTransactions.innerHTML=rows.length?rows.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+esc(t.reason)+"</td><td>"+(t.created_at?new Date(t.created_at).toLocaleDateString("fa-IR"):"—")+"</td></tr>").join(""):'<tr><td colspan="4" class="report-empty">هنوز تراکنشی ثبت نشده است.</td></tr>';
+  if(status)status.textContent="اطلاعات با موفقیت به‌روزرسانی شد";
+ }catch(e){
+  if(status)status.textContent="دریافت اطلاعات ناموفق بود";
+  recentTransactions.innerHTML='<tr><td colspan="4" class="report-empty">اطلاعات داشبورد دریافت نشد. '+esc(e.message)+'</td></tr>';
+  toast(e.message);
+ }
+}
+document.getElementById("refreshDashboard")?.addEventListener("click",dashboard);
 let reportRows=[];
+function renderReportRows(query=""){
+ const body=document.getElementById("reportTransactions");
+ const q=query.trim().toLocaleLowerCase("fa");
+ const filtered=reportRows.filter(t=>[t.username,t.reason,t.amount,t.balance_after].some(v=>String(v??"").toLocaleLowerCase("fa").includes(q)));
+ body.innerHTML=filtered.length?filtered.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+num(t.balance_after)+"</td><td>"+esc(t.reason)+"</td><td>"+(t.created_at?new Date(t.created_at).toLocaleString("fa-IR"):"—")+"</td></tr>").join(""):'<tr><td colspan="5" class="report-empty">'+(reportRows.length?"موردی با این عبارت پیدا نشد.":"هنوز تراکنشی ثبت نشده است.")+'</td></tr>';
+}
 async function reports(){
  const body=document.getElementById("reportTransactions");
  const status=document.getElementById("reportStatus");
@@ -15,7 +39,7 @@ async function reports(){
   document.getElementById("reportNegative").textContent=num(Math.abs(negative));
   const latest=reportRows[0]?.created_at;
   document.getElementById("reportLatest").textContent=latest?new Date(latest).toLocaleDateString("fa-IR"):"—";
-  body.innerHTML=reportRows.length?reportRows.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+num(t.balance_after)+"</td><td>"+esc(t.reason)+"</td><td>"+new Date(t.created_at).toLocaleString("fa-IR")+"</td></tr>").join(""):'<tr><td colspan="5" class="report-empty">هنوز تراکنشی ثبت نشده است.</td></tr>';
+  renderReportRows(document.getElementById("reportSearch")?.value||"");
   status.textContent=reportRows.length+" رکورد دریافت شد";
  }catch(e){
   status.textContent="دریافت اطلاعات ناموفق بود";
@@ -23,6 +47,7 @@ async function reports(){
   toast(e.message);
  }
 }
+document.getElementById("reportSearch")?.addEventListener("input",e=>renderReportRows(e.target.value));
 document.getElementById("exportTransactions")?.addEventListener("click",()=>{
  if(!reportRows.length){toast("داده‌ای برای خروجی وجود ندارد");return}
  const quote=v=>'"'+String(v??"").replace(/"/g,'""')+'"';

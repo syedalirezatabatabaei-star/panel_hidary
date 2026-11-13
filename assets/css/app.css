@@ -1447,3 +1447,53 @@ body.dashboard-layout *{
 .dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav a:hover{background:#d5e1ef!important;color:#173b63!important;}
 .dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav a.active{background:#244b78!important;color:#fff!important;}
 .dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav a.active .nav-icon{background:#345d89!important;}
+
+
+/* Dark navy sidebar navigation */
+.dashboard-layout .sidebar{
+  background:linear-gradient(180deg,#102b49 0%,#0d2440 58%,#091d34 100%)!important;
+  color:#e7eef7!important;
+  border-left:1px solid #294765!important;
+  box-shadow:5px 0 24px rgba(5,20,38,.18)!important;
+}
+.dashboard-layout .sidebar-brand{border-bottom-color:rgba(220,235,250,.16)!important}
+.dashboard-layout .sidebar-brand-copy b{color:#f4f8fc!important}
+.dashboard-layout .sidebar-brand-copy small{color:#a9bfd6!important}
+.dashboard-layout .dashboard-nav a,
+.dashboard-layout:not(.theme-dark) .dashboard-nav a{color:#c6d5e5!important}
+.dashboard-layout .dashboard-nav a:hover,
+.dashboard-layout:not(.theme-dark) .dashboard-nav a:hover{
+  background:#1b3d60!important;color:#fff!important
+}
+.dashboard-layout .dashboard-nav a.active,
+.dashboard-layout:not(.theme-dark) .dashboard-nav a.active{
+  background:#28527d!important;color:#fff!important;
+  box-shadow:inset -3px 0 #91b9e4!important
+}
+.dashboard-layout .dashboard-nav .nav-icon{
+  background:#1b3b5b!important;color:#dce9f7!important
+}
+.dashboard-layout .dashboard-nav a.active .nav-icon{
+  background:#3b6793!important;color:#fff!important
+}
+.dashboard-layout .dashboard-nav .nav-icon img,
+.dashboard-layout .dashboard-nav a.active .nav-icon img{
+  filter:brightness(0) invert(1)!important
+}
+.dashboard-layout .dashboard-nav .settings-subnav{
+  border-right-color:#577797!important
+}
+.dashboard-layout .dashboard-nav .settings-subnav a,
+.dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav a{
+  background:#173653!important;color:#c8d8e8!important
+}
+.dashboard-layout .dashboard-nav .settings-subnav a:hover{
+  background:#244b70!important;color:#fff!important
+}
+.dashboard-layout .dashboard-nav .settings-subnav a.active{
+  background:#315f8c!important;color:#fff!important
+}
+.dashboard-layout .sidebar-bottom{border-top-color:rgba(220,235,250,.16)!important}
+.dashboard-layout .logout-action{color:#f0c7ca!important}
+.dashboard-layout .logout-action:hover{background:#263d57!important}
+.dashboard-layout .logout-action .nav-icon{background:#3b3442!important;color:#f3c8cc!important}

@@ -10,7 +10,7 @@ from .models import User,PagePermission,CoinTransaction
 from .security import hash_password,verify_password,create_access_token,current_user
 app=FastAPI(title="Hidary Admin API",version="1.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=settings.allowed_origins,allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
-PAGES={"dashboard":"داشبورد","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت سکه"}
+PAGES={"dashboard":"داشبورد","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت توکن"}
 DEFAULTS={"admin":{k:(True,True) for k in PAGES},"manager":{"dashboard":(True,False),"users":(True,True),"permissions":(False,False),"coins":(True,True)},"user":{"dashboard":(True,False),"users":(False,False),"permissions":(False,False),"coins":(True,False)}}
 def seed():
     Base.metadata.create_all(bind=engine); db=SessionLocal()

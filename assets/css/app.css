@@ -513,3 +513,139 @@
 .dashboard-layout select:focus-visible{
   outline-color:#9aa58a;
 }
+
+
+/* Professional dashboard theme, profile menu and persistent dark mode */
+.dashboard-layout .topbar-actions{display:flex;align-items:center;gap:12px;position:relative}
+.dashboard-layout .theme-toggle{
+  width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;
+  border:1px solid #e4e8e5;border-radius:12px;background:#fff;color:#42534b;
+  cursor:pointer;transition:background .2s,border-color .2s,transform .2s;
+}
+.dashboard-layout .theme-toggle:hover{background:#f1f4f1;border-color:#cbd6ce;transform:translateY(-1px)}
+.dashboard-layout .theme-toggle img{width:20px;height:20px;display:block}
+.dashboard-layout .profile-menu-wrap{position:relative}
+.dashboard-layout .profile-menu-trigger{
+  cursor:pointer;text-align:right;font-family:inherit;
+  transition:border-color .2s,box-shadow .2s,background .2s;
+}
+.dashboard-layout .profile-menu-trigger:hover,
+.dashboard-layout .profile-menu-trigger[aria-expanded="true"]{
+  border-color:#cbd6ce;box-shadow:0 5px 16px rgba(36,54,44,.08)
+}
+.dashboard-layout .profile-chevron{font-size:17px;color:#819087;margin-right:3px;line-height:1}
+.dashboard-layout .profile-menu{
+  position:absolute;z-index:50;top:calc(100% + 10px);left:0;width:230px;
+  padding:9px;border:1px solid #e3e8e4;border-radius:14px;background:#fff;
+  box-shadow:0 16px 42px rgba(25,40,31,.15);display:grid;gap:4px;
+}
+.dashboard-layout .profile-menu.hidden{display:none!important}
+.dashboard-layout .profile-menu-heading{display:grid;gap:3px;padding:10px 11px 12px;border-bottom:1px solid #edf0ed;margin-bottom:4px}
+.dashboard-layout .profile-menu-heading b{font-size:13px;color:#34443b}
+.dashboard-layout .profile-menu-heading small{font-size:11px;color:#849087}
+.dashboard-layout .profile-menu a,
+.dashboard-layout .profile-menu .logout-action{
+  min-height:41px;width:100%;display:flex;align-items:center;gap:10px;
+  padding:9px 11px;border:0;border-radius:9px;background:transparent;
+  color:#526158;text-decoration:none;font:inherit;font-size:12px;text-align:right;cursor:pointer;
+}
+.dashboard-layout .profile-menu a:hover{background:#f1f4f1;color:#354a3d}
+.dashboard-layout .profile-menu .logout-action{color:#a24f52}
+.dashboard-layout .profile-menu .logout-action:hover{background:#fbefef;color:#913e42}
+.dashboard-layout .menu-item-icon{width:22px;height:22px;display:grid;place-items:center}
+.dashboard-layout .menu-item-icon img{width:17px;height:17px}
+.dashboard-layout .profile-menu .logout-action .nav-icon{
+  width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:#fbefef;
+}
+.dashboard-layout .profile-menu .logout-action .nav-icon img{
+  width:16px;height:16px;display:block;transform:rotate(180deg);
+}
+.dashboard-layout.theme-dark{
+  background:#171d1b!important;color:#e5ebe7;
+  --dash-dark-bg:#171d1b;--dash-dark-surface:#202825;--dash-dark-raised:#252f2a;
+  --dash-dark-border:#34413a;--dash-dark-text:#e3eae5;--dash-dark-muted:#a0ada5;
+  --dash-dark-accent:#9bb39f;--dash-dark-accent-strong:#78977f;
+}
+.dashboard-layout.theme-dark .sidebar{
+  background:linear-gradient(165deg,#202925 0%,#1a231f 100%)!important;
+  color:#dce5de;border-color:#34413a!important;box-shadow:5px 0 24px rgba(0,0,0,.16)
+}
+.dashboard-layout.theme-dark .sidebar-brand,
+.dashboard-layout.theme-dark .sidebar-bottom{border-color:#34413a}
+.dashboard-layout.theme-dark .sidebar-brand-copy b{color:#e3ebe5}
+.dashboard-layout.theme-dark .sidebar-brand-copy small{color:#9eada2}
+.dashboard-layout.theme-dark .dashboard-nav a{color:#b8c6bc}
+.dashboard-layout.theme-dark .dashboard-nav a:hover{background:#2a3730;color:#f0f5f1}
+.dashboard-layout.theme-dark .dashboard-nav a.active{
+  color:#edf5ef;background:#304238;box-shadow:inset -3px 0 #9bb39f
+}
+.dashboard-layout.theme-dark .dashboard-nav .nav-icon{background:#2a352f;color:#a9c0ad}
+.dashboard-layout.theme-dark .dashboard-nav a.active .nav-icon{background:#3a4b40}
+.dashboard-layout.theme-dark .dashboard-nav .nav-icon img,
+.dashboard-layout.theme-dark .logout-action .nav-icon img{filter:brightness(0) saturate(100%) invert(82%) sepia(12%) saturate(350%) hue-rotate(78deg) brightness(94%) contrast(88%)}
+.dashboard-layout.theme-dark .main-content{background:transparent}
+.dashboard-layout.theme-dark .dashboard-topbar{border-color:#34413a}
+.dashboard-layout.theme-dark .dashboard-topbar h1,
+.dashboard-layout.theme-dark .welcome h2,
+.dashboard-layout.theme-dark .panel h3,
+.dashboard-layout.theme-dark .panel-heading h3{color:#e5ece7}
+.dashboard-layout.theme-dark .dashboard-topbar .eyebrow,
+.dashboard-layout.theme-dark .profile-details small,
+.dashboard-layout.theme-dark .welcome p{color:#a0ada5}
+.dashboard-layout.theme-dark .user-profile,
+.dashboard-layout.theme-dark .theme-toggle{
+  background:#202825;border-color:#3a4840;color:#e2eae4
+}
+.dashboard-layout.theme-dark .user-profile:hover,
+.dashboard-layout.theme-dark .user-profile[aria-expanded="true"],
+.dashboard-layout.theme-dark .theme-toggle:hover{background:#2a352f;border-color:#526458}
+.dashboard-layout.theme-dark .profile-avatar{background:#35463a;color:#c3d5c6}
+.dashboard-layout.theme-dark .profile-details b{color:#e5ece7}
+.dashboard-layout.theme-dark .profile-chevron{color:#a8b8ad}
+.dashboard-layout.theme-dark .theme-toggle img{filter:brightness(0) invert(1)}
+.dashboard-layout.theme-dark .stat-card,
+.dashboard-layout.theme-dark .panel{
+  background:#202825;border-color:#34413a;box-shadow:0 5px 20px rgba(0,0,0,.12)
+}
+.dashboard-layout.theme-dark .stat-card span,
+.dashboard-layout.theme-dark .panel p{color:#a0ada5}
+.dashboard-layout.theme-dark .stat-card strong{color:#b5cdb9}
+.dashboard-layout.theme-dark th{background:#29342e;color:#b7c7bb}
+.dashboard-layout.theme-dark td{color:#d2ddd5;border-bottom-color:#34413a}
+.dashboard-layout.theme-dark .btn-primary,
+.dashboard-layout.theme-dark .btn.btn-primary{background:#607d67!important;border-color:#607d67!important;color:#fff}
+.dashboard-layout.theme-dark .btn-primary:hover,
+.dashboard-layout.theme-dark .btn.btn-primary:hover{background:#72927a!important;border-color:#72927a!important}
+.dashboard-layout.theme-dark .permission-row{border-color:#34413a;color:#d4ded7}
+.dashboard-layout.theme-dark .permission-row input{accent-color:#9bb39f}
+.dashboard-layout.theme-dark .placeholder-icon{background:#2d3b32;color:#b5cdb9}
+.dashboard-layout.theme-dark .placeholder-icon img{filter:brightness(0) saturate(100%) invert(82%) sepia(12%) saturate(350%) hue-rotate(78deg) brightness(94%) contrast(88%)}
+.dashboard-layout.theme-dark .toast{background:#3b5142;color:#f2f6f3}
+.dashboard-layout.theme-dark .profile-menu{
+  background:#222c27;border-color:#3b4941;box-shadow:0 16px 42px rgba(0,0,0,.35)
+}
+.dashboard-layout.theme-dark .profile-menu-heading{border-color:#39463e}
+.dashboard-layout.theme-dark .profile-menu-heading b{color:#e5ece7}
+.dashboard-layout.theme-dark .profile-menu-heading small{color:#a0ada5}
+.dashboard-layout.theme-dark .profile-menu a,
+.dashboard-layout.theme-dark .profile-menu .logout-action{color:#cbd7ce}
+.dashboard-layout.theme-dark .profile-menu a:hover{background:#303d35;color:#f1f6f2}
+.dashboard-layout.theme-dark .profile-menu .logout-action{color:#e4a3a3}
+.dashboard-layout.theme-dark .profile-menu .logout-action:hover{background:#493233;color:#ffdada}
+.dashboard-layout.theme-dark .profile-menu .logout-action .nav-icon{background:#493233}
+.dashboard-layout.theme-dark .form-grid input,
+.dashboard-layout.theme-dark .form-grid select{
+  background:#202825;border-color:#3b4941;color:#e2eae4
+}
+.dashboard-layout.theme-dark .form-grid input::placeholder{color:#8f9d94}
+.dashboard-layout.theme-dark a:focus-visible,
+.dashboard-layout.theme-dark button:focus-visible,
+.dashboard-layout.theme-dark input:focus-visible,
+.dashboard-layout.theme-dark select:focus-visible{outline-color:#a7c2ad}
+.dashboard-layout.theme-dark .table-wrap{color:#d2ddd5}
+@media(max-width:650px){
+  .dashboard-layout .topbar-actions{gap:7px}
+  .dashboard-layout .theme-toggle{width:38px;height:38px;flex-basis:38px}
+  .dashboard-layout .profile-menu{left:0;right:auto;width:min(230px,calc(100vw - 34px))}
+  .dashboard-layout .profile-chevron{display:none}
+}

@@ -79,3 +79,28 @@
 .login-v12-footer{color:rgba(255,255,255,.76);font-size:11px;text-align:center;margin:5px 0 0}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:520px){.login-page{padding:20px 14px;background-attachment:scroll}.login-v12{min-height:calc(100svh - 40px)}.login-v12-card{padding:69px 25px 31px;margin-top:48px;width:min(100%,410px)}.login-v12-avatar{width:98px;height:98px;top:-50px}.login-v12-card h1{font-size:24px}}
+
+/* Accurate Colorlib Login Form V12 layout adaptation */
+.login-page{min-height:100vh;padding:0;background:#0a5caa;display:block;overflow-x:hidden}
+.login-v12{width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 15px;position:relative;isolation:isolate}
+.login-v12-overlay{position:absolute;z-index:-1;inset:0;background-image:linear-gradient(to top,rgba(0,91,234,.90),rgba(0,198,251,.90)),url("https://raw.githubusercontent.com/ColorlibHQ/login-form-templates/main/login-form-v12/images/img-01.jpg");background-position:center;background-size:cover;background-repeat:no-repeat}
+.login-v12-card{width:390px;max-width:100%;position:relative;margin:0;padding:0 0 30px;text-align:center;background:transparent;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.login-v12-avatar{position:static;transform:none;width:120px;height:120px;margin:0 auto 20px;border-radius:50%;overflow:hidden;background:#fff;border:0;box-shadow:0 4px 18px rgba(0,0,0,.14);display:grid;place-items:center}
+.login-v12-avatar img{width:100%;height:100%;object-fit:contain;padding:14px}
+.login-v12-kicker{font-size:13px;color:rgba(255,255,255,.8);margin:0 0 4px}
+.login-v12-card h1{font-size:24px;font-weight:700;color:#fff;line-height:1.3;margin:0 0 10px}
+.login-v12-subtitle{font-size:13px;line-height:1.9;color:rgba(255,255,255,.82);margin:0 auto 34px;max-width:330px}
+.login-v12-form{display:flex;flex-direction:column;gap:10px;width:100%}
+.login-v12-form>input,.login-v12-password{height:50px;width:100%;border:0;border-radius:25px;background:#fff;padding:0 30px;color:#333;outline:none;font-family:inherit;font-size:14px;text-align:right;box-shadow:none}
+.login-v12-form>input:focus,.login-v12-password:focus-within{box-shadow:0 0 0 3px rgba(0,198,251,.28)}
+.login-v12-form input::placeholder{color:#999;opacity:1}
+.login-v12-password{display:flex;align-items:center;padding:0 25px 0 22px}
+.login-v12-password input{height:100%;min-width:0;flex:1;border:0;outline:0;background:transparent;font-family:inherit;font-size:14px;color:#333}
+.login-v12-password button{border:0;background:transparent;color:#999;font-size:17px;cursor:pointer;padding:7px}
+.login-v12-form .form-error{min-height:14px;text-align:right;margin:0 15px;color:#fff;font-size:12px}
+.login-v12-submit{height:50px;width:100%;border:0;border-radius:25px;background:#333;color:#e0e0e0;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:all .35s;position:relative;overflow:hidden}
+.login-v12-submit:hover{background:#00a7ee;color:#fff;box-shadow:0 7px 22px rgba(0,49,120,.25)}
+.login-v12-bottom{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:25px;color:rgba(255,255,255,.83);font-size:11px}
+.login-v12-bottom span{width:7px;height:7px;border-radius:50%;background:#b8f4e1}
+.login-v12-footer{color:rgba(255,255,255,.78);font-size:11px;text-align:center;margin:0;padding:0 0 12px}
+@media(max-width:576px){.login-v12{padding:30px 15px}.login-v12-card{padding:0 15px 25px}.login-v12-avatar{width:110px;height:110px}.login-v12-subtitle{margin-bottom:27px}}

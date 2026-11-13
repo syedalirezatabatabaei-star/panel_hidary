@@ -105,7 +105,7 @@
 .login-v12-footer{color:rgba(255,255,255,.78);font-size:11px;text-align:center;margin:0;padding:0 0 12px}
 @media(max-width:576px){.login-v12{padding:30px 15px}.login-v12-card{padding:0 15px 25px}.login-v12-avatar{width:110px;height:110px}.login-v12-subtitle{margin-bottom:27px}}
 
-/* Responsive login backgrounds: Naqsh-e Jahan on desktop, Milad Tower on mobile */
+/* Optimized, neutral-color login backgrounds */
 .login-v12-overlay{
   position:absolute;
   z-index:-1;
@@ -116,28 +116,23 @@
 .login-v12-overlay::before{
   content:"";
   position:absolute;
-  inset:-6px;
+  inset:-4px;
   z-index:0;
-  background-image:url("https://behdasht.news/images/upfiles/20240713/GSV70sYWAAE1f2o.jpg");
+  background-image:url("https://wsrv.nl/?url=behdasht.news%2Fimages%2Fupfiles%2F20240713%2FGSV70sYWAAE1f2o.jpg&output=webp&w=1920&q=80");
   background-position:center;
   background-size:cover;
   background-repeat:no-repeat;
-  filter:blur(2px);
+  filter:blur(1px);
   transform:scale(1.01);
 }
-.login-v12-overlay::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:1;
-  background:linear-gradient(135deg,rgba(0,91,234,.66),rgba(0,160,220,.58) 52%,rgba(0,55,125,.68));
-}
+.login-v12-avatar{margin-left:auto;margin-right:auto;}
+.login-v12-avatar img{transform:translateX(-5px);}
 @media(max-width:576px){
   .login-v12-overlay::before{
-    background-image:url("../../login/images/milad.jpg");
+    background-image:url("https://wsrv.nl/?url=raw.githubusercontent.com%2Fsyedalirez atabatabaei-star%2Fpanel_hidary%2Fmain%2Flogin%2Fimages%2Fmilad.jpg&output=webp&w=1000&q=78");
     background-size:cover;
     background-position:center center;
-    filter:blur(2px);
-    transform:scale(1.02);
+    filter:blur(1px);
+    transform:scale(1.01);
   }
 }

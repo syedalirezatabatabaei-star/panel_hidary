@@ -154,6 +154,7 @@ class SystemConfigInput(BaseModel):
 @app.get("/api/wallet")
 def wallet_summary(user:User=Depends(current_user),db:Session=Depends(get_db)):
     w=wallet_for(db,user.id)
+    db.commit()
     rate=Decimal(setting(db,"usd_irr_rate","600000"))
     return {"balance_irr":float(w.balance_irr),"balance_usd":float(w.balance_irr/rate),"usd_irr_rate":float(rate)}
 

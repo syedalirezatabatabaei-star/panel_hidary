@@ -104,3 +104,33 @@
 .login-v12-bottom span{width:7px;height:7px;border-radius:50%;background:#b8f4e1}
 .login-v12-footer{color:rgba(255,255,255,.78);font-size:11px;text-align:center;margin:0;padding:0 0 12px}
 @media(max-width:576px){.login-v12{padding:30px 15px}.login-v12-card{padding:0 15px 25px}.login-v12-avatar{width:110px;height:110px}.login-v12-subtitle{margin-bottom:27px}}
+
+/* Responsive login backgrounds: Naqsh-e Jahan on desktop, Milad Tower on mobile */
+.login-v12-overlay{
+  position:absolute;
+  z-index:-1;
+  inset:0;
+  overflow:hidden;
+  background:linear-gradient(135deg,rgba(0,91,234,.68),rgba(0,160,220,.60) 52%,rgba(0,55,125,.70));
+}
+.login-v12-overlay::before{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  z-index:-1;
+  background-image:url("https://behdasht.news/images/upfiles/20240713/GSV70sYWAAE1f2o.jpg");
+  background-position:center;
+  background-size:contain;
+  background-repeat:no-repeat;
+  filter:blur(2px);
+  transform:scale(1.01);
+}
+@media(max-width:576px){
+  .login-v12-overlay::before{
+    background-image:url("../../login/images/milad.jpg");
+    background-size:cover;
+    background-position:center center;
+    filter:blur(2px);
+    transform:scale(1.02);
+  }
+}

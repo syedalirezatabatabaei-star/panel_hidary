@@ -1429,3 +1429,21 @@ body.dashboard-layout *{
 .dashboard-layout .sidebar-brand-copy{order:0;flex:1;text-align:right}
 .dashboard-layout .sidebar-brand .sidebar-logo{order:1;margin:0!important;transform:translateX(-7px)!important}
 @media(max-width:650px){.dashboard-layout #sideNav .settings-subnav{margin-right:12px}}
+
+
+/* Requested sidebar alignment and deeper blue light theme */
+.dashboard-layout .sidebar-brand{direction:rtl!important;}
+.dashboard-layout .sidebar-brand .sidebar-logo{order:0!important;margin:0!important;transform:none!important;}
+.dashboard-layout .sidebar-brand .sidebar-brand-copy{order:1!important;flex:1;text-align:right;}
+.dashboard-layout .dashboard-nav .settings-chevron{width:16px;height:16px;flex:0 0 16px;margin-right:auto;transition:transform .2s ease;}
+.dashboard-layout .dashboard-nav a.submenu-open .settings-chevron{transform:rotate(180deg);}
+.dashboard-layout:not(.theme-dark) .dashboard-nav a{color:#344b67!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav a:hover{background:#dce6f1!important;color:#173b63!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav a.active{color:#fff!important;background:#244b78!important;box-shadow:inset -3px 0 #8db6e4!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav a.active .nav-icon{background:#345d89!important;color:#fff!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav a.active .nav-icon img{filter:brightness(0) invert(1)!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav{border-right-color:#9eb4cc!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav a{background:#e8eef5!important;color:#294766!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav a:hover{background:#d5e1ef!important;color:#173b63!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav a.active{background:#244b78!important;color:#fff!important;}
+.dashboard-layout:not(.theme-dark) .dashboard-nav .settings-subnav a.active .nav-icon{background:#345d89!important;}

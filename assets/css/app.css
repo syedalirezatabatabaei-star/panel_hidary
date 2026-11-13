@@ -1322,3 +1322,20 @@ body.dashboard-layout *{
  .dashboard-layout .dashboard-kpis .stat-copy strong{font-size:21px}
  .dashboard-layout .dashboard-kpis .stat-copy small{font-size:10px}
 }
+
+/* Dashboard light-mode contrast and navigation refinements */
+.dashboard-layout:not(.theme-dark) .stat-card span,
+.dashboard-layout:not(.theme-dark) .dashboard-layout .section-note,
+.dashboard-layout:not(.theme-dark) .dashboard-section-heading .section-note,
+.dashboard-layout:not(.theme-dark) .profile-details small,
+.dashboard-layout:not(.theme-dark) .dashboard-topbar .eyebrow{color:#5b626b}
+.dashboard-layout:not(.theme-dark) .welcome p,
+.dashboard-layout:not(.theme-dark) .panel p{color:#59636f}
+.dashboard-layout:not(.theme-dark) .stat-card-link{display:inline-block;margin-top:9px;color:#315b48;font-size:12px;font-weight:800;text-decoration:none}
+.dashboard-layout:not(.theme-dark) .stat-card-link:hover{text-decoration:underline}
+.trend-product-nav{display:flex;align-items:center;gap:10px;color:#39434d;font-size:13px;font-weight:800}
+.trend-product-nav select{min-width:190px;padding:9px 12px;border:1px solid #cbd5cf;border-radius:9px;background:#fff;color:#26352c;font:inherit;cursor:pointer}
+.dashboard-layout:not(.theme-dark) .dashboard-nav a{color:#4e4548}
+.dashboard-layout:not(.theme-dark) .dashboard-nav a.active{color:#66343d}
+.dashboard-layout:not(.theme-dark) .section-kicker{color:#59636f}
+@media(max-width:650px){.trend-heading{align-items:flex-start;flex-direction:column;gap:12px}.trend-product-nav{width:100%;justify-content:space-between}.trend-product-nav select{min-width:0;flex:1}}

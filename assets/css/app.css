@@ -1198,3 +1198,132 @@ body.dashboard-layout textarea{
     width:50px;height:50px;flex-basis:50px;transform:translateX(4px);
   }
 }
+
+
+/* Updated typography, centered menu search and larger dashboard text */
+@font-face{
+ font-family:IranSansLocal;
+ src:url("../../dashbord/font/IranSans.woff2") format("woff2");
+ font-style:normal;font-weight:100 900;font-display:swap;
+}
+/* IranSans is used when supplied; Yekan Bakh is the checked-in local fallback. */
+@font-face{
+ font-family:YekanBakhLocal;
+ src:url("../../dashbord/font/Yekan_Bakh_Regular.Byvis5zr.woff") format("woff");
+ font-style:normal;font-weight:400;font-display:swap;
+}
+@font-face{
+ font-family:YekanBakhLocal;
+ src:url("../../dashbord/font/Yekan_Bakh_Medium.RlOqlP2J.woff") format("woff");
+ font-style:normal;font-weight:500 600;font-display:swap;
+}
+@font-face{
+ font-family:YekanBakhLocal;
+ src:url("../../dashbord/font/Yekan_Bakh_Bold.DMVJaKBT.woff") format("woff");
+ font-style:normal;font-weight:700 900;font-display:swap;
+}
+body.dashboard-layout,
+body.dashboard-layout *{
+ font-family:IranSansLocal,YekanBakhLocal,PeydaWeb,Tahoma,sans-serif!important;
+}
+.dashboard-layout .topbar.dashboard-topbar{
+ display:grid!important;
+ grid-template-columns:minmax(170px,1fr) minmax(240px, min(38vw,430px)) minmax(170px,1fr);
+ align-items:center;
+ gap:22px;
+}
+.dashboard-layout .topbar-search{
+ position:relative;
+ width:100%;
+ max-width:430px;
+ justify-self:center;
+}
+.dashboard-layout .topbar-search input{
+ width:100%;height:44px;padding:0 43px 0 15px;
+ border:1px solid #dfe6ee;border-radius:12px;
+ background:#f7f9fb;color:#34465b;
+ font-size:14px;font-weight:500;outline:none;
+ transition:border-color .18s,box-shadow .18s,background .18s;
+}
+.dashboard-layout .topbar-search input::placeholder{color:#8b98a8}
+.dashboard-layout .topbar-search input:focus{
+ background:#fff;border-color:#91a8bd;
+ box-shadow:0 0 0 4px rgba(69,107,140,.10);
+}
+.dashboard-layout .topbar-search>span{
+ position:absolute;right:14px;top:50%;transform:translateY(-52%);
+ color:#71859a;font-size:25px;line-height:1;pointer-events:none;
+}
+.dashboard-layout .topbar-actions{justify-self:end}
+.dashboard-layout .dashboard-nav a.search-hidden{display:none!important}
+.dashboard-layout .dashboard-kpis .product-kpi{
+ position:relative;display:flex;align-items:center;gap:15px;
+ min-height:132px;padding:21px;text-decoration:none;
+ color:inherit;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;
+}
+.dashboard-layout:not(.theme-dark) .dashboard-kpis .product-kpi{
+ background:#fff;border:1px solid #e4eaf1;
+}
+.dashboard-layout .dashboard-kpis .product-kpi:hover{
+ transform:translateY(-2px);box-shadow:0 9px 24px rgba(35,58,82,.09);
+ border-color:#a9bacb;
+}
+.dashboard-layout .dashboard-kpis .product-kpi .stat-copy strong{
+ color:#456b8c;font-size:22px;
+}
+.dashboard-layout .product-kpi-arrow{
+ margin-right:auto;color:#6c849c;font-size:22px;
+}
+.dashboard-layout .dashboard-kpis .stat-copy>span{font-size:13px}
+.dashboard-layout .dashboard-kpis .stat-copy small{font-size:12px}
+.dashboard-layout .dashboard-kpis .stat-copy strong{font-size:27px}
+.dashboard-layout .dashboard-section-heading h3{font-size:18px}
+.dashboard-layout .service-card b{font-size:14px}
+.dashboard-layout .service-card>div span{font-size:12px}
+.dashboard-layout .dashboard-nav a{font-size:14px;min-height:49px}
+.dashboard-layout .sidebar-brand-copy b{font-size:17px}
+.dashboard-layout .sidebar-brand-copy small{font-size:12px}
+.dashboard-layout .dashboard-topbar h1{font-size:25px}
+.dashboard-layout .dashboard-topbar .eyebrow{font-size:12px}
+.dashboard-layout .welcome h2{font-size:23px}
+.dashboard-layout .welcome p{font-size:14px}
+.dashboard-layout .dashboard-kpis .stat-card{min-height:140px}
+.dashboard-layout .dashboard-kpis .stat-copy strong{line-height:1.5}
+.dashboard-layout .panel-heading h3,.dashboard-layout .panel h3{font-size:16px}
+.dashboard-layout th,.dashboard-layout td{font-size:13px}
+.dashboard-layout .btn,.dashboard-layout button{font-size:13px}
+.dashboard-layout .section-kicker{font-size:12px}
+.dashboard-layout .dashboard-section-heading .section-note{font-size:12px}
+.dashboard-layout .data-status,.dashboard-layout .report-status{font-size:11px}
+.dashboard-layout .form-grid input,.dashboard-layout .form-grid select{font-size:14px}
+.dashboard-layout .report-tools input{font-size:13px}
+.dashboard-layout.theme-dark .topbar-search input{
+ background:#202825;border-color:#3a4840;color:#e2eae4;
+}
+.dashboard-layout.theme-dark .topbar-search input::placeholder{color:#a0ada5}
+.dashboard-layout.theme-dark .topbar-search input:focus{
+ border-color:#78977f;box-shadow:0 0 0 4px rgba(120,151,127,.14);
+}
+.dashboard-layout.theme-dark .topbar-search>span{color:#a9c0ad}
+.dashboard-layout.theme-dark .dashboard-kpis .product-kpi{
+ background:#182438;border-color:#2b3a51;color:#e2eaf5;
+}
+.dashboard-layout.theme-dark .dashboard-kpis .product-kpi .stat-copy strong,
+.dashboard-layout.theme-dark .product-kpi-arrow{color:#b5cdb9}
+@media(max-width:900px){
+ .dashboard-layout .topbar.dashboard-topbar{
+  grid-template-columns:minmax(140px,1fr) minmax(190px,34vw) auto;gap:12px;
+ }
+}
+@media(max-width:650px){
+ .dashboard-layout .topbar.dashboard-topbar{
+  display:flex!important;flex-wrap:wrap;align-items:center;
+ }
+ .dashboard-layout .topbar-search{order:3;max-width:none;flex:1 1 100%}
+ .dashboard-layout .topbar-search input{height:42px}
+ .dashboard-layout .topbar-actions{margin-right:auto}
+ .dashboard-layout .dashboard-kpis .product-kpi{min-height:112px;padding:14px;gap:10px}
+ .dashboard-layout .dashboard-kpis .stat-copy>span{font-size:12px}
+ .dashboard-layout .dashboard-kpis .stat-copy strong{font-size:21px}
+ .dashboard-layout .dashboard-kpis .stat-copy small{font-size:10px}
+}

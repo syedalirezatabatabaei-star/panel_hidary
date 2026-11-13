@@ -4,7 +4,6 @@ let me=null;const labels={dashboard:"داشبورد",products:"لیست محصو
  try{
   const d=await api.get("/api/dashboard");
   usersTotal.textContent=num(d.users_total);
-  usersActive.textContent=num(d.users_active);
   coinsTotal.textContent=num(d.coins_total);
   coinsUsed.textContent=num(d.coins_used);
   const rows=Array.isArray(d.recent_transactions)?d.recent_transactions:[];
@@ -17,6 +16,23 @@ let me=null;const labels={dashboard:"داشبورد",products:"لیست محصو
  }
 }
 document.getElementById("refreshDashboard")?.addEventListener("click",dashboard);
+const menuSearch=document.getElementById("menuSearch");
+const navLinks=[...document.querySelectorAll("#sideNav a[data-page]")];
+function filterMenuItems(value){
+ const q=value.trim().toLocaleLowerCase("fa");
+ navLinks.forEach(a=>a.classList.toggle("search-hidden",!!q&&!a.textContent.toLocaleLowerCase("fa").includes(q)));
+}
+menuSearch?.addEventListener("input",e=>filterMenuItems(e.target.value));
+menuSearch?.addEventListener("keydown",e=>{
+ if(e.key==="Enter"){
+  const first=navLinks.find(a=>!a.classList.contains("search-hidden")&&!a.classList.contains("hidden"));
+  if(first){page(first.dataset.page);menuSearch.value="";filterMenuItems("");menuSearch.blur()}
+ }
+ if(e.key==="Escape"){menuSearch.value="";filterMenuItems("");menuSearch.blur()}
+});
+document.getElementById("productKpiTile")?.addEventListener("click",e=>{
+ e.preventDefault();page("products");
+});
 let reportRows=[];
 function renderReportRows(query=""){
  const body=document.getElementById("reportTransactions");

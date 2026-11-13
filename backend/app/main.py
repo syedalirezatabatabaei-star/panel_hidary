@@ -155,8 +155,8 @@ class SystemConfigInput(BaseModel):
 def wallet_summary(user:User=Depends(current_user),db:Session=Depends(get_db)):
     w=wallet_for(db,user.id)
     db.commit()
-    rate=Decimal(setting(db,"usd_irr_rate","600000"))
-    return {"balance_irr":float(w.balance_irr),"balance_usd":float(w.balance_irr/rate),"usd_irr_rate":float(rate)}
+    rate=Decimal(setting(db,"usd_irr_rate","0") or "0")
+    return {"balance_irr":float(w.balance_irr),"balance_usd":float(w.balance_irr/rate) if rate>0 else 0,"usd_irr_rate":float(rate)}
 
 @app.get("/api/wallet/requests")
 def wallet_requests(user:User=Depends(current_user),db:Session=Depends(get_db)):
@@ -171,7 +171,9 @@ def wallet_requests(user:User=Depends(current_user),db:Session=Depends(get_db)):
 def create_wallet_request(data:WalletRequestInput,user:User=Depends(current_user),db:Session=Depends(get_db)):
     currency=data.currency.upper()
     if currency not in ("IRR","USD"): raise HTTPException(400,"واحد پول نامعتبر است")
-    rate=Decimal(setting(db,"usd_irr_rate","600000"))
+    rate=Decimal(setting(db,"usd_irr_rate","0") or "0")
+    if rate<=0: raise HTTPException(400,"مدیر هنوز نرخ تبدیل دلار را تنظیم نکرده است")
+    if not setting(db,"card_number","").strip(): raise HTTPException(400,"اطلاعات کارت بانکی هنوز توسط مدیر ثبت نشده است")
     amount_irr=data.amount if currency=="IRR" else data.amount*rate
     amount_usd=data.amount if currency=="USD" else data.amount/rate
     row=WalletRequest(user_id=user.id,entered_currency=currency,entered_amount=data.amount,amount_irr=amount_irr,amount_usd=amount_usd,fx_rate=rate,status="awaiting_payment")
@@ -242,7 +244,7 @@ def review_withdrawal(transaction_id:int,data:WalletReviewInput,actor:User=Depen
 
 @app.get("/api/wallet/config")
 def get_wallet_config(user:User=Depends(current_user),db:Session=Depends(get_db)):
-    return {"usd_irr_rate":setting(db,"usd_irr_rate","600000"),"bank_name":setting(db,"bank_name","بانک"),"card_holder":setting(db,"card_holder","نام صاحب کارت"),"card_number":setting(db,"card_number","0000-0000-0000-0000"),"iban":setting(db,"iban",""),"bank_description":setting(db,"bank_description","")}
+    return {"usd_irr_rate":setting(db,"usd_irr_rate","0"),"bank_name":setting(db,"bank_name",""),"card_holder":setting(db,"card_holder",""),"card_number":setting(db,"card_number",""),"iban":setting(db,"iban",""),"bank_description":setting(db,"bank_description","")}
 
 @app.put("/api/wallet/config")
 def update_wallet_config(data:WalletConfigInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):

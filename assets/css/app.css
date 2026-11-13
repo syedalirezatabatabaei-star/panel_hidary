@@ -1201,11 +1201,6 @@ body.dashboard-layout textarea{
 
 
 /* Updated typography, centered menu search and larger dashboard text */
-@font-face{
- font-family:IranSansLocal;
- src:url("../../dashbord/font/IranSans.woff2") format("woff2");
- font-style:normal;font-weight:100 900;font-display:swap;
-}
 /* IranSans is used when supplied; Yekan Bakh is the checked-in local fallback. */
 @font-face{
  font-family:YekanBakhLocal;
@@ -1224,7 +1219,7 @@ body.dashboard-layout textarea{
 }
 body.dashboard-layout,
 body.dashboard-layout *{
- font-family:IranSansLocal,YekanBakhLocal,PeydaWeb,Tahoma,sans-serif!important;
+ font-family:YekanBakhLocal,PeydaWeb,Tahoma,sans-serif!important;
 }
 .dashboard-layout .topbar.dashboard-topbar{
  display:grid!important;

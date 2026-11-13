@@ -7,8 +7,8 @@ let me=null;const labels={dashboard:"داشبورد",products:"لیست محصو
   usersTotal.textContent=num(d.users_total);
   coinsTotal.textContent=num(d.coins_total);
   coinsUsed.textContent=num(d.coins_used);
-  if(document.getElementById("productCount"))document.getElementById("productCount").textContent="—";
-  if(document.getElementById("sitesTotal"))document.getElementById("sitesTotal").textContent="—";
+  if(document.getElementById("productCount"))document.getElementById("productCount").textContent="API ندارد";
+  if(document.getElementById("sitesTotal"))document.getElementById("sitesTotal").textContent="API ندارد";
   const rows=Array.isArray(d.recent_transactions)?d.recent_transactions:[];
   recentTransactions.innerHTML=rows.length?rows.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+esc(t.reason)+"</td><td>"+(t.created_at?new Date(t.created_at).toLocaleDateString("fa-IR"):"—")+"</td></tr>").join(""):'<tr><td colspan="4" class="report-empty">هنوز تراکنشی ثبت نشده است.</td></tr>';
   if(updatedAt)updatedAt.textContent=new Date().toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"});

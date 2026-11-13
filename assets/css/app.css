@@ -129,7 +129,7 @@
 .login-v12-avatar img{transform:translateX(-5px);}
 @media(max-width:576px){
   .login-v12-overlay::before{
-    background-image:url("https://wsrv.nl/?url=raw.githubusercontent.com%2Fsyedalirez atabatabaei-star%2Fpanel_hidary%2Fmain%2Flogin%2Fimages%2Fmilad.jpg&output=webp&w=1000&q=78");
+    background-image:url("https://wsrv.nl/?url=raw.githubusercontent.com%2Fsyedalirezatabatabaei-star%2Fpanel_hidary%2Fmain%2Flogin%2Fimages%2Fmilad.jpg&output=webp&w=1000&q=78");
     background-size:cover;
     background-position:center center;
     filter:blur(1px);

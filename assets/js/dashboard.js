@@ -22,6 +22,20 @@ let me=null;const labels={dashboard:"داشبورد",products:"لیست محصو
 document.getElementById("refreshDashboard")?.addEventListener("click",dashboard);
 const menuSearch=document.getElementById("menuSearch");
 const navLinks=[...document.querySelectorAll("#sideNav a[data-page]")];
+const settingsToggle=document.querySelector('#sideNav a[data-page="settings"]');
+const settingsSubnav=document.getElementById("settingsSubnav");
+function toggleSettingsSubnav(force){
+ const open=typeof force==="boolean"?force:settingsSubnav.classList.contains("hidden");
+ settingsSubnav.classList.toggle("hidden",!open);
+ settingsToggle?.setAttribute("aria-expanded",String(open));
+ settingsToggle?.classList.toggle("submenu-open",open);
+}
+settingsToggle?.addEventListener("click",e=>{
+ e.preventDefault();
+ toggleSettingsSubnav();
+ page("settings");
+});
+if(location.hash==="#settings")toggleSettingsSubnav(true);
 function filterMenuItems(value){
  const q=value.trim().toLocaleLowerCase("fa");
  navLinks.forEach(a=>a.classList.toggle("search-hidden",!!q&&!a.textContent.toLocaleLowerCase("fa").includes(q)));

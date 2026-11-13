@@ -63,6 +63,7 @@ class WalletRequest(Base):
     reviewed_by:Mapped[int|None]=mapped_column(ForeignKey("users.id"),nullable=True)
     reviewed_at:Mapped[datetime|None]=mapped_column(DateTime,nullable=True)
     created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
+    user=relationship("User",foreign_keys=[user_id])
 
 class WalletTransaction(Base):
     __tablename__="wallet_transactions"
@@ -75,3 +76,4 @@ class WalletTransaction(Base):
     description:Mapped[str]=mapped_column(String(255))
     request_id:Mapped[int|None]=mapped_column(ForeignKey("wallet_requests.id"),nullable=True)
     created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
+    user=relationship("User",foreign_keys=[user_id])

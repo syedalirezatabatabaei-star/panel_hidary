@@ -1404,3 +1404,11 @@ body.dashboard-layout *{
 .withdrawal-request-card small{display:block;color:#7b8794;font-size:11px}
 .withdrawal-request-card p{margin:0;color:var(--muted,#65716a);font-size:12px;line-height:1.8;overflow-wrap:anywhere}
 .withdrawal-request-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+
+/* Settings submenu */
+.dashboard-nav .settings-chevron{margin-right:auto;font-size:15px;transition:transform .2s ease}
+.dashboard-nav a.submenu-open .settings-chevron{transform:rotate(180deg)}
+.dashboard-nav .settings-subnav{display:grid;gap:5px;margin:2px 10px 9px 0;padding:7px 10px 7px 0;border-right:2px solid var(--dash-line)}
+.dashboard-nav .settings-subnav a{min-height:38px;padding:8px 10px;font-size:13px;background:transparent}
+.dashboard-nav .settings-subnav a.active{background:var(--dash-active,var(--dash-line))}

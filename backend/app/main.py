@@ -12,8 +12,8 @@ from datetime import datetime
 from decimal import Decimal
 app=FastAPI(title="Hidary Admin API",version="1.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=settings.allowed_origins,allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
-PAGES={"dashboard":"داشبورد","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت توکن"}
-DEFAULTS={"admin":{k:(True,True) for k in PAGES},"manager":{"dashboard":(True,False),"users":(True,True),"permissions":(False,False),"coins":(True,True)},"user":{"dashboard":(True,False),"users":(False,False),"permissions":(False,False),"coins":(True,False)}}
+PAGES={"dashboard":"داشبورد","products":"محصولات","addProduct":"افزودن محصول","sites":"سایت‌های پایش‌شده","aiTokens":"توکن هوش مصنوعی","settings":"تنظیمات","systemSettings":"تنظیمات کلی سیستم","reports":"گزارش‌ها","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت توکن"}
+DEFAULTS={"admin":{k:(True,True) for k in PAGES},"manager":{"dashboard":(True,False),"users":(True,True),"permissions":(False,False),"coins":(True,True),"reports":(True,False),"aiTokens":(True,False)},"user":{"dashboard":(True,False),"aiTokens":(True,False)}}
 def seed():
     Base.metadata.create_all(bind=engine); db=SessionLocal()
     try:
@@ -150,6 +150,7 @@ class SystemConfigInput(BaseModel):
     support_email:str=""
     support_phone:str=""
     default_currency:str="IRR"
+    withdrawal_fee_percent:Decimal=Field(default=Decimal("0"),ge=0,le=100)
 
 @app.get("/api/wallet")
 def wallet_summary(user:User=Depends(current_user),db:Session=Depends(get_db)):
@@ -202,10 +203,17 @@ def get_wallet_proof(request_id:int,user:User=Depends(current_user),db:Session=D
 def create_withdrawal(data:WalletWithdrawInput,user:User=Depends(current_user),db:Session=Depends(get_db)):
     w=wallet_for(db,user.id)
     amount=Decimal(data.amount_irr)
-    if Decimal(w.balance_irr)<amount: raise HTTPException(400,"موجودی کیف پول کافی نیست")
-    row=WalletTransaction(user_id=user.id,actor_id=user.id,transaction_type="withdrawal_pending",amount_irr=-amount,balance_after_irr=w.balance_irr,description="درخواست برداشت: "+data.destination)
+    fee_rate=Decimal(setting(db,"withdrawal_fee_percent","0") or "0")
+    if fee_rate<0 or fee_rate>100: raise HTTPException(500,"نرخ کارمزد برداشت در تنظیمات نامعتبر است")
+    pending=db.query(func.coalesce(func.sum(-WalletTransaction.amount_irr),0)).filter(WalletTransaction.user_id==user.id,WalletTransaction.transaction_type=="withdrawal_pending").scalar() or Decimal("0")
+    available=Decimal(w.balance_irr)-Decimal(pending)
+    if available<amount: raise HTTPException(400,"موجودی قابل برداشت پس از کسر درخواست‌های در انتظار کافی نیست")
+    fee=(amount*fee_rate/Decimal("100")).quantize(Decimal("0.01"))
+    payout=amount-fee
+    description="درخواست برداشت: "+data.destination+" | کارمزد: "+str(fee)+" ریال ("+str(fee_rate)+"٪) | مبلغ خالص: "+str(payout)+" ریال"
+    row=WalletTransaction(user_id=user.id,actor_id=user.id,transaction_type="withdrawal_pending",amount_irr=-amount,balance_after_irr=w.balance_irr,description=description)
     db.add(row);db.commit();db.refresh(row)
-    return {"id":row.id,"status":"pending"}
+    return {"id":row.id,"status":"pending","amount_irr":float(amount),"fee_irr":float(fee),"payout_irr":float(payout),"fee_percent":float(fee_rate)}
 
 @app.get("/api/wallet/withdrawals")
 def list_withdrawals(user:User=Depends(current_user),db:Session=Depends(get_db)):
@@ -253,7 +261,7 @@ def update_wallet_config(data:WalletConfigInput,actor:User=Depends(wallet_admin)
 
 @app.get("/api/system/config")
 def get_system_config(user:User=Depends(current_user),db:Session=Depends(get_db)):
-    return {"site_title":setting(db,"site_title","پنل مدیریت حیدری"),"support_email":setting(db,"support_email",""),"support_phone":setting(db,"support_phone",""),"default_currency":setting(db,"default_currency","IRR")}
+    return {"site_title":setting(db,"site_title","پنل مدیریت حیدری"),"support_email":setting(db,"support_email",""),"support_phone":setting(db,"support_phone",""),"default_currency":setting(db,"default_currency","IRR"),"withdrawal_fee_percent":setting(db,"withdrawal_fee_percent","0")}
 
 @app.put("/api/system/config")
 def update_system_config(data:SystemConfigInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):

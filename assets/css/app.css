@@ -1339,3 +1339,22 @@ body.dashboard-layout *{
 .dashboard-layout:not(.theme-dark) .dashboard-nav a.active{color:#66343d}
 .dashboard-layout:not(.theme-dark) .section-kicker{color:#59636f}
 @media(max-width:650px){.trend-heading{align-items:flex-start;flex-direction:column;gap:12px}.trend-product-nav{width:100%;justify-content:space-between}.trend-product-nav select{min-width:0;flex:1}}
+
+/* Larger dashboard typography and trailing action arrows */
+.dashboard-layout .dashboard-kpis .stat-copy>span{font-size:15px!important;font-weight:800!important}
+.dashboard-layout .dashboard-kpis .stat-copy strong{font-size:30px!important}
+.dashboard-layout .dashboard-kpis .stat-copy small,
+.dashboard-layout .dashboard-kpis .stat-card-link{font-size:14px!important;font-weight:700!important}
+.dashboard-layout .dashboard-section-heading h3{font-size:20px!important}
+.dashboard-layout .dashboard-section-heading .section-note,
+.dashboard-layout .section-kicker{font-size:13px!important}
+.dashboard-layout .welcome h2{font-size:25px!important}
+.dashboard-layout .welcome p{font-size:15px!important}
+.dashboard-layout .panel-heading h3,.dashboard-layout .panel h3{font-size:18px!important}
+.dashboard-layout th,.dashboard-layout td{font-size:14px!important}
+.dashboard-layout .product-kpi-link,.dashboard-layout .stat-card-link{display:inline-flex!important;align-items:center;gap:7px;margin-top:9px;color:#315b48;font-size:14px!important;font-weight:800;text-decoration:none}
+.dashboard-layout .product-kpi-link:hover,.dashboard-layout .stat-card-link:hover{text-decoration:underline;text-underline-offset:4px}
+.dashboard-layout .stat-link-arrow{display:inline-block;margin-right:auto;font-size:17px;line-height:1;transition:transform .18s ease}
+.dashboard-layout .product-kpi:hover .stat-link-arrow,.dashboard-layout .stat-card-link:hover .stat-link-arrow{transform:translateX(-3px)}
+.dashboard-layout.theme-dark .product-kpi-link,.dashboard-layout.theme-dark .stat-card-link{color:#c4d9ca}
+@media(max-width:650px){.dashboard-layout .dashboard-kpis .stat-copy>span{font-size:13px!important}.dashboard-layout .dashboard-kpis .stat-copy strong{font-size:23px!important}.dashboard-layout .dashboard-kpis .stat-copy small,.dashboard-layout .dashboard-kpis .stat-card-link{font-size:12px!important}}

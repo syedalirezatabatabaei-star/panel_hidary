@@ -1390,3 +1390,10 @@ body.dashboard-layout *{
 
 .dashboard-layout .sidebar-brand{justify-content:center!important;transform:translateX(-7px)}
 .dashboard-layout .sidebar-brand .sidebar-logo{margin-left:8px!important;transform:translateX(-3px)!important}
+
+/* Brand copy remains on the right; only the logo image moves slightly left. */
+.dashboard-layout .sidebar-brand{direction:rtl;justify-content:flex-start;transform:none!important}
+.dashboard-layout .sidebar-brand-copy{order:0;flex:1}
+.dashboard-layout .sidebar-brand .sidebar-logo{order:1;margin:0!important;transform:translateX(-7px)!important}
+.settings-tile>span img{width:22px;height:22px;object-fit:contain}
+.settings-tile>span{flex:0 0 42px}

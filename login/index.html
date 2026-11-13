@@ -1,1 +1,71 @@
-<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ورود | پنل حیدری</title><link rel="stylesheet" href="../assets/css/app.css"></head><body class="login-page"><main class="login-card"><div class="brand-mark">ح</div><p class="eyebrow">سامانه مدیریت</p><h1>ورود به پنل حیدری</h1><p class="muted">برای ادامه، اطلاعات حساب خود را وارد کنید.</p><form id="loginForm"><label>نام کاربری</label><input name="username" autocomplete="username" required><label>رمز عبور</label><input name="password" type="password" autocomplete="current-password" required><p id="error" class="form-error"></p><button class="btn btn-primary btn-block">ورود به سامانه</button></form><footer>پنل مدیریتی حیدری</footer></main><script src="../assets/js/api.js"></script><script src="../assets/js/login.js"></script></body></html>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#102b4e">
+  <title>ورود به پنل حیدری</title>
+  <link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-brand" aria-label="معرفی پنل حیدری">
+      <div class="brand-topline">
+        <img class="login-logo" src="images/logo.png" alt="لوگوی حیدری">
+        <span>سامانه یکپارچه مدیریت</span>
+      </div>
+      <div class="brand-copy">
+        <span class="brand-kicker">HIDARY MANAGEMENT</span>
+        <h1>مدیریت هوشمند،<br>تصمیم‌گیری مطمئن</h1>
+        <p>به فضای مدیریت و نظارت پنل حیدری خوش آمدید.</p>
+      </div>
+      <div class="brand-decoration" aria-hidden="true">
+        <span class="deco-ring ring-one"></span>
+        <span class="deco-ring ring-two"></span>
+        <span class="deco-square"></span>
+      </div>
+      <div class="brand-footer"><span class="brand-dot"></span> دسترسی امن و متمرکز به سامانه</div>
+    </section>
+
+    <section class="login-form-side">
+      <div class="login-form-wrap">
+        <div class="mobile-logo"><img src="images/logo.png" alt="لوگوی حیدری"></div>
+        <div class="form-heading">
+          <span class="form-overline">خوش آمدید</span>
+          <h2>ورود به حساب کاربری</h2>
+          <p>برای ورود، نام کاربری و رمز عبور خود را وارد کنید.</p>
+        </div>
+        <form id="loginForm" class="login-form">
+          <label for="username">نام کاربری</label>
+          <div class="input-wrap">
+            <span class="field-icon" aria-hidden="true">＠</span>
+            <input id="username" name="username" type="text" placeholder="نام کاربری خود را وارد کنید" autocomplete="username" required>
+          </div>
+          <label for="password">رمز عبور</label>
+          <div class="input-wrap">
+            <span class="field-icon lock-icon" aria-hidden="true">▣</span>
+            <input id="password" name="password" type="password" placeholder="رمز عبور خود را وارد کنید" autocomplete="current-password" required>
+            <button class="password-toggle" type="button" id="togglePassword" aria-label="نمایش رمز عبور">◉</button>
+          </div>
+          <p id="error" class="form-error" role="alert" aria-live="polite"></p>
+          <button class="btn btn-primary btn-block login-submit" type="submit">
+            <span>ورود به سامانه</span><span class="submit-arrow" aria-hidden="true">←</span>
+          </button>
+        </form>
+        <div class="login-security"><span class="security-icon">✓</span><span>ورود شما از طریق اتصال امن انجام می‌شود.</span></div>
+      </div>
+      <footer class="login-copyright">© تمامی حقوق این سامانه محفوظ است.</footer>
+    </section>
+  </main>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/login.js"></script>
+  <script>
+    const passwordInput = document.getElementById("password");
+    document.getElementById("togglePassword").addEventListener("click", function () {
+      const visible = passwordInput.type === "password";
+      passwordInput.type = visible ? "text" : "password";
+      this.setAttribute("aria-label", visible ? "پنهان کردن رمز عبور" : "نمایش رمز عبور");
+    });
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 let me=null;const labels={dashboard:"داشبورد",products:"لیست محصولات",addProduct:"افزودن محصول جدید",aiTokens:"توکن هوش مصنوعی",settings:"تنظیمات",reports:"گزارش‌ها",users:"کاربران",permissions:"نقش‌ها و دسترسی‌ها",coins:"مدیریت سکه"};function allowed(k){return me.role==="admin"||!!me.permissions[k]?.view}function canEdit(k){return me.role==="admin"||!!me.permissions[k]?.edit}function role(r){return ({admin:"مدیر کل",manager:"مدیر",user:"کاربر"})[r]||r}function page(k){if(!document.getElementById(k+"Page"))k="dashboard";if((["users","permissions","coins"].includes(k)&&!allowed(k))||(k==="reports"&&!allowed("coins")) ){toast("دسترسی ندارید");return}document.querySelectorAll(".page-section").forEach(x=>x.classList.add("hidden"));document.getElementById(k+"Page").classList.remove("hidden");document.getElementById("pageTitle").textContent=labels[k];document.querySelectorAll("#sideNav a").forEach(a=>a.classList.toggle("active",a.dataset.page===k));if(location.hash!=="#"+k)history.replaceState(null,"","#"+k);const loaders={dashboard,users,permissions,coins,reports};if(loaders[k])loaders[k]()}async function dashboard(){
  const status=document.getElementById("dashboardStatus");
+ const updatedAt=document.getElementById("lastUpdated");
  if(status)status.textContent="در حال دریافت اطلاعات...";
  try{
   const d=await api.get("/api/dashboard");
@@ -8,6 +9,7 @@ let me=null;const labels={dashboard:"داشبورد",products:"لیست محصو
   coinsUsed.textContent=num(d.coins_used);
   const rows=Array.isArray(d.recent_transactions)?d.recent_transactions:[];
   recentTransactions.innerHTML=rows.length?rows.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+esc(t.reason)+"</td><td>"+(t.created_at?new Date(t.created_at).toLocaleDateString("fa-IR"):"—")+"</td></tr>").join(""):'<tr><td colspan="4" class="report-empty">هنوز تراکنشی ثبت نشده است.</td></tr>';
+  if(updatedAt)updatedAt.textContent=new Date().toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"});
   if(status)status.textContent="اطلاعات با موفقیت به‌روزرسانی شد";
  }catch(e){
   if(status)status.textContent="دریافت اطلاعات ناموفق بود";
@@ -43,7 +45,7 @@ function renderReportRows(query=""){
 async function reports(){
  const body=document.getElementById("reportTransactions");
  const status=document.getElementById("reportStatus");
- if(!allowed("coins")){toast("برای مشاهده گزارش‌ها دسترسی مدیریت سکه لازم است");return}
+ if(!allowed("coins")){toast("برای مشاهده گزارش‌ها دسترسی مدیریت توکن لازم است");return}
  status.textContent="در حال دریافت...";
  try{
   const rows=await api.get("/api/coins/transactions");

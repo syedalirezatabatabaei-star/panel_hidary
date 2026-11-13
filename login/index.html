@@ -3,59 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#102b4e">
-  <title>ورود به پنل حیدری</title>
+  <meta name="theme-color" content="#172b45">
+  <title>ورود | پنل حیدری</title>
   <link rel="stylesheet" href="../assets/css/app.css">
 </head>
 <body class="login-page">
-  <main class="login-shell">
-    <section class="login-brand" aria-label="معرفی پنل حیدری">
-      <div class="brand-topline">
-        <img class="login-logo" src="images/logo.png" alt="لوگوی حیدری">
-        <span>سامانه یکپارچه مدیریت</span>
+  <main class="login-v12">
+    <div class="login-v12-overlay" aria-hidden="true"></div>
+    <section class="login-v12-card" aria-labelledby="loginTitle">
+      <div class="login-v12-avatar">
+        <img src="images/logo.png" alt="لوگوی پنل حیدری">
       </div>
-      <div class="brand-copy">
-        <span class="brand-kicker">HIDARY MANAGEMENT</span>
-        <h1>مدیریت هوشمند،<br>تصمیم‌گیری مطمئن</h1>
-        <p>به فضای مدیریت و نظارت پنل حیدری خوش آمدید.</p>
-      </div>
-      <div class="brand-decoration" aria-hidden="true">
-        <span class="deco-ring ring-one"></span>
-        <span class="deco-ring ring-two"></span>
-        <span class="deco-square"></span>
-      </div>
-      <div class="brand-footer"><span class="brand-dot"></span> دسترسی امن و متمرکز به سامانه</div>
-    </section>
-
-    <section class="login-form-side">
-      <div class="login-form-wrap">
-        <div class="mobile-logo"><img src="images/logo.png" alt="لوگوی حیدری"></div>
-        <div class="form-heading">
-          <span class="form-overline">خوش آمدید</span>
-          <h2>ورود به حساب کاربری</h2>
-          <p>برای ورود، نام کاربری و رمز عبور خود را وارد کنید.</p>
+      <p class="login-v12-kicker">سامانه مدیریت</p>
+      <h1 id="loginTitle">پنل حیدری</h1>
+      <p class="login-v12-subtitle">برای ورود به حساب کاربری خود اطلاعات زیر را وارد کنید</p>
+      <form id="loginForm" class="login-v12-form">
+        <label class="sr-only" for="username">نام کاربری</label>
+        <input id="username" name="username" type="text" placeholder="نام کاربری" autocomplete="username" required>
+        <label class="sr-only" for="password">رمز عبور</label>
+        <div class="login-v12-password">
+          <input id="password" name="password" type="password" placeholder="رمز عبور" autocomplete="current-password" required>
+          <button type="button" id="togglePassword" aria-label="نمایش رمز عبور">◉</button>
         </div>
-        <form id="loginForm" class="login-form">
-          <label for="username">نام کاربری</label>
-          <div class="input-wrap">
-            <span class="field-icon" aria-hidden="true">＠</span>
-            <input id="username" name="username" type="text" placeholder="نام کاربری خود را وارد کنید" autocomplete="username" required>
-          </div>
-          <label for="password">رمز عبور</label>
-          <div class="input-wrap">
-            <span class="field-icon lock-icon" aria-hidden="true">▣</span>
-            <input id="password" name="password" type="password" placeholder="رمز عبور خود را وارد کنید" autocomplete="current-password" required>
-            <button class="password-toggle" type="button" id="togglePassword" aria-label="نمایش رمز عبور">◉</button>
-          </div>
-          <p id="error" class="form-error" role="alert" aria-live="polite"></p>
-          <button class="btn btn-primary btn-block login-submit" type="submit">
-            <span>ورود به سامانه</span><span class="submit-arrow" aria-hidden="true">←</span>
-          </button>
-        </form>
-        <div class="login-security"><span class="security-icon">✓</span><span>ورود شما از طریق اتصال امن انجام می‌شود.</span></div>
-      </div>
-      <footer class="login-copyright">© تمامی حقوق این سامانه محفوظ است.</footer>
+        <p id="error" class="form-error" role="alert" aria-live="polite"></p>
+        <button class="login-v12-submit" type="submit">ورود به سامانه</button>
+      </form>
+      <div class="login-v12-bottom"><span></span> ورود امن به پنل مدیریتی</div>
     </section>
+    <footer class="login-v12-footer">© پنل مدیریتی حیدری</footer>
   </main>
   <script src="../assets/js/api.js"></script>
   <script src="../assets/js/login.js"></script>

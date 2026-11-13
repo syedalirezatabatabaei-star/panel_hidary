@@ -1387,3 +1387,6 @@ body.dashboard-layout *{
 .dashboard-layout.theme-dark .bank-payment-panel>p{color:#d3dfd6}
 @media(max-width:850px){.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.settings-grid{grid-template-columns:1fr}.bank-card-visual{min-height:190px;padding:17px}.bank-card-visual>strong{font-size:17px}.wallet-request-form{grid-template-columns:1fr}}
+
+.dashboard-layout .sidebar-brand{justify-content:center!important;transform:translateX(-7px)}
+.dashboard-layout .sidebar-brand .sidebar-logo{margin-left:8px!important;transform:translateX(-3px)!important}

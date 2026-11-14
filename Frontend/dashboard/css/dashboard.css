@@ -153,8 +153,10 @@ tbody tr:last-child td{border-bottom:0}
 .theme-dark .settings-subnav a:hover{background:#2b557d}
 .theme-dark .toast{background:#315f8b}
 /* Final readability and compact sidebar brand alignment */
-.sidebar-brand{direction:ltr;justify-content:flex-end;gap:4px}
-.sidebar-brand-copy{direction:rtl;flex:0 1 auto;text-align:right}
+.sidebar-brand{direction:ltr;justify-content:flex-end;align-items:center;gap:4px}
+.sidebar-brand-copy{direction:rtl;display:flex;flex:0 1 auto;flex-direction:column;align-items:flex-end;justify-content:center;min-width:0;text-align:right;line-height:1.2}
+.sidebar-brand-copy b,.sidebar-brand-copy small{display:block;width:100%;margin:0;text-align:right;white-space:nowrap}
+.sidebar-brand-copy small{margin-top:2px}
 .sidebar-brand-copy b{font-size:17px}
 .sidebar-brand-copy small{font-size:12px}
 .dashboard-nav>a{font-size:14px}

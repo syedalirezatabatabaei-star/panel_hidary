@@ -1,0 +1,3 @@
+/* Login-page styles. Shared design tokens and reusable components are in /assets/css/app.css. */
+.login-page { min-height: 100vh; }
+.login-page .login-v12 { min-height: 100vh; }

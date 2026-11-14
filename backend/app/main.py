@@ -11,7 +11,7 @@ from .database import Base,engine,SessionLocal,get_db
 from .models import User,PagePermission,UserPagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction
 from .security import hash_password,verify_password,create_access_token,current_user
 from datetime import datetime
-app=FastAPI(title="Hidary Admin API",version="1.0.0")
+app=FastAPI(title="Hidary Admin API",version="1.1.0",docs_url="/docs" if settings.api_docs_enabled else None,redoc_url="/redoc" if settings.api_docs_enabled else None,openapi_url="/openapi.json" if settings.api_docs_enabled else None)
 app.add_middleware(CORSMiddleware,allow_origins=settings.allowed_origins,allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 PAGES={"dashboard":"داشبورد","products":"محصولات","addProduct":"افزودن محصول","sites":"سایت‌های پایش‌شده","aiTokens":"توکن هوش مصنوعی","settings":"تنظیمات","systemSettings":"تنظیمات کلی سیستم","reports":"گزارش‌ها","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت توکن"}
 DEFAULTS={"admin":{k:(True,True) for k in PAGES},"manager":{"dashboard":(True,False),"users":(True,True),"permissions":(False,False),"coins":(True,True),"reports":(True,False),"aiTokens":(True,False),"settings":(True,False)},"user":{"dashboard":(True,False),"aiTokens":(True,False)}}

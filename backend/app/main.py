@@ -403,7 +403,13 @@ def get_wallet_proof(request_id:int,user:User=Depends(current_user),db:Session=D
     from fastapi.responses import Response
     row=db.get(WalletRequest,request_id)
     if not row or not row.proof_data or (row.user_id!=user.id and user.role!="admin"): raise HTTPException(404,"فیش پیدا نشد")
-    return Response(content=row.proof_data,media_type=row.proof_content_type,headers={"Content-Disposition":'inline; filename="'+(row.proof_filename or "proof")+'"'})
+    safe_name=re.sub(r"[^A-Za-z0-9._-]","_",row.proof_filename or "proof")[:120] or "proof"
+    disposition="attachment" if row.proof_content_type=="application/pdf" else "inline"
+    return Response(content=row.proof_data,media_type=row.proof_content_type,headers={
+        "Content-Disposition":f'{disposition}; filename="{safe_name}"',
+        "X-Content-Type-Options":"nosniff",
+        "Content-Security-Policy":"sandbox"
+    })
 
 @app.post("/api/wallet/withdrawals",status_code=201)
 def create_withdrawal(data:WalletWithdrawInput,user:User=Depends(current_user),db:Session=Depends(get_db)):

@@ -109,8 +109,12 @@ services:
         condition: service_healthy
     networks:
       - frontend_backend
+      - shared_network
 
 networks:
+  shared_network:
+    external: true
+    name: shared_network
   frontend_backend:
     driver: bridge
   database_network:

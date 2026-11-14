@@ -37,7 +37,7 @@ def seed():
                 if not own:
                     view,edit=role_defaults.get(key,(False,False))
                     db.add(UserPagePermission(user_id=account.id,page_key=key,can_view=view,can_edit=edit))
-        for key,value in {"fx_auto_enabled":"true","exchange_fee_percent":"0.5","fx_status":"waiting","fx_source":"TGJU"}.items():
+        for key,value in {"fx_auto_enabled":"true","exchange_fee_percent":"0.5","fx_status":"waiting","fx_source":"TGJU","n8n_user_visible_limit":"10"}.items():
             if not db.get(SystemSetting,key): db.add(SystemSetting(key=key,value=value))
         db.commit()
     finally: db.close()
@@ -224,8 +224,12 @@ def update_tgju_rate_once():
     try:
         if (setting(db,"fx_auto_enabled","true") or "true").lower() not in ("true","1","yes","on"):
             return None
-        rate=fetch_tgju_rate()
+        market_rate=fetch_tgju_rate()
+        # TGJU supplies IRR; 1,000 toman markup equals 10,000 IRR.
+        rate=market_rate+Decimal("10000")
         set_setting(db,"usd_irr_rate",str(rate))
+        set_setting(db,"fx_market_rate_irr",str(market_rate))
+        set_setting(db,"fx_markup_toman","1000")
         set_setting(db,"fx_updated_at",datetime.utcnow().isoformat())
         set_setting(db,"fx_status","ok")
         set_setting(db,"fx_source","TGJU")
@@ -284,6 +288,7 @@ class SystemConfigInput(BaseModel):
     support_phone:str=""
     default_currency:str="IRR"
     withdrawal_fee_percent:Decimal=Field(default=Decimal("0"),ge=0,le=100)
+    n8n_user_visible_limit:int=Field(default=10,ge=1,le=500)
 
 @app.get("/api/wallet")
 def wallet_summary(user:User=Depends(current_user),db:Session=Depends(get_db)):
@@ -428,7 +433,10 @@ def get_fx_rate(user:User=Depends(current_user),db:Session=Depends(get_db)):
 
 @app.get("/api/system/config")
 def get_system_config(user:User=Depends(current_user),db:Session=Depends(get_db)):
-    return {"site_title":setting(db,"site_title","پنل مدیریت حیدری"),"support_email":setting(db,"support_email",""),"support_phone":setting(db,"support_phone",""),"default_currency":setting(db,"default_currency","IRR"),"withdrawal_fee_percent":setting(db,"withdrawal_fee_percent","0")}
+    result={"site_title":setting(db,"site_title","پنل مدیریت"),"support_email":setting(db,"support_email",""),"support_phone":setting(db,"support_phone",""),"default_currency":setting(db,"default_currency","IRR"),"withdrawal_fee_percent":setting(db,"withdrawal_fee_percent","0")}
+    if user.role=="admin":
+        result["n8n_user_visible_limit"]=int(setting(db,"n8n_user_visible_limit","10") or "10")
+    return result
 
 @app.put("/api/system/config")
 def update_system_config(data:SystemConfigInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):

@@ -238,7 +238,7 @@
       try{await api.put("/api/wallet/config",Object.fromEntries(new FormData(form)));toast("اطلاعات کارت و نرخ تبدیل ذخیره شد.");await loadWallet();}
       catch(x){toast(x.message);}finally{busy(button,false);}
     });
-    id("logoutBtn")?.addEventListener("click",()=>{try{localStorage.removeItem("hidary_token");}catch(_){}location.replace("../login/");});
+    id("logoutBtn")?.addEventListener("click",()=>{try{localStorage.removeItem("hidary_token");}catch(_){}location.replace("/login/");});
     id("userMenuBtn")?.addEventListener("click",()=>{const menu=id("userMenu"),open=menu.classList.toggle("hidden")===false;id("userMenuBtn").setAttribute("aria-expanded",String(open));});
     document.addEventListener("click",e=>{if(!e.target.closest(".profile-menu-wrap"))closeUserMenu();});
     document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeUserMenu();submenu(false);}});
@@ -259,6 +259,8 @@
     });
   }
   async function init() {
+    let storedToken=null;try{storedToken=localStorage.getItem("hidary_token");}catch(_){}
+    if(!storedToken){location.replace("/login/");return;}
     bindEvents();let theme="light";try{theme=localStorage.getItem("hidary_theme")||"light";}catch(_){}setTheme(theme==="dark");
     try{
       me=await api.get("/api/auth/me");if(!me||!me.id)throw new Error("اطلاعات حساب کاربری از سرور دریافت نشد.");
@@ -266,7 +268,7 @@
       renderPermissions();
       const requested=location.hash.replace(/^#/,""),initial=labels[requested]&&id(requested+"Page")?requested:"dashboard";
       if(initial==="settings")submenu(true);showPage(initial,false);
-    }catch(e){toast(e.message||"ورود به داشبورد ناموفق بود.");}
+    }catch(e){try{localStorage.removeItem("hidary_token");}catch(_){}location.replace("/login/");}
   }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init,{once:true}); else init();
 })();

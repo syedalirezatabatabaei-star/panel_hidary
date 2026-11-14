@@ -150,6 +150,7 @@ def create_user(data:UserCreate,request:Request,actor:User=Depends(require_page(
     for key in PAGES:
         view,edit=role_defaults.get(key,(False,False))
         db.add(UserPagePermission(user_id=u.id,page_key=key,can_view=view,can_edit=edit))
+    audit_event(db,"user.created",actor=actor,target_user_id=u.id,request=request,details={"role":u.role})
     db.commit(); db.refresh(u)
     return {"id":u.id,"username":u.username}
 @app.patch("/api/users/{uid}")

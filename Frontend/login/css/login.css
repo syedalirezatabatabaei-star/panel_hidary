@@ -156,3 +156,35 @@ body.login-page{
 @media(max-width:420px){
   .login-v12-card{padding:26px 20px}
 }
+
+
+/* Brighter, more vivid login palette */
+body.login-page{
+  background-image:
+    linear-gradient(125deg,rgba(4,28,58,.56),rgba(0,105,128,.30) 52%,rgba(13,38,91,.42)),
+    url("https://commons.wikimedia.org/wiki/Special:FilePath/Naqsh-e_Jahan_Square%2C_Isfahan.jpg");
+}
+.login-v12-card{
+  background:rgba(255,255,255,.985);
+  border:1px solid rgba(255,255,255,.9);
+  box-shadow:0 26px 75px rgba(2,22,49,.32);
+}
+.login-v12-kicker{color:#078b9b}
+.login-v12-card h1{color:#102f50}
+.login-v12-subtitle{color:#586d82}
+.login-v12-avatar{border-color:#d9f4f2;box-shadow:0 8px 26px rgba(0,139,155,.14)}
+.login-v12-form>input,.login-v12-password{
+  border-color:#d5e7ed;
+  background:#f4fbfd;
+  color:#12334d;
+}
+.login-v12-form>input:focus,.login-v12-password:focus-within{
+  border-color:#08a6b2;
+  box-shadow:0 0 0 4px rgba(8,166,178,.14);
+}
+.login-v12-submit{
+  background:linear-gradient(115deg,#08a6b2 0%,#0877bd 55%,#3158d8 100%);
+  box-shadow:0 9px 24px rgba(8,119,189,.28);
+}
+.login-v12-submit:hover{box-shadow:0 14px 30px rgba(8,119,189,.36)}
+.password-visibility:hover{background:#e3f7f8;color:#078b9b}

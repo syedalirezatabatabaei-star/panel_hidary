@@ -377,9 +377,23 @@ async def upload_wallet_proof(request_id:int,file:UploadFile=File(...),user:User
     if not row or (row.user_id!=user.id and user.role!="admin"): raise HTTPException(404,"درخواست پیدا نشد")
     if row.status not in ("awaiting_payment","pending"): raise HTTPException(400,"این درخواست در وضعیت قابل ارسال فیش نیست")
     if file.content_type not in ("image/jpeg","image/png","image/webp","application/pdf"): raise HTTPException(400,"فقط تصویر یا PDF مجاز است")
-    data=await file.read()
-    if len(data)>5*1024*1024: raise HTTPException(400,"حداکثر حجم فیش ۵ مگابایت است")
-    row.proof_filename=file.filename[:255];row.proof_content_type=file.content_type;row.proof_data=data;row.status="pending"
+    chunks=[]; total=0; limit=5*1024*1024
+    while True:
+        chunk=await file.read(65536)
+        if not chunk: break
+        total+=len(chunk)
+        if total>limit:
+            await file.close()
+            raise HTTPException(413,"حداکثر حجم فیش ۵ مگابایت است")
+        chunks.append(chunk)
+    data=b"".join(chunks)
+    signatures={"image/jpeg":lambda b:b.startswith(bytes.fromhex("ffd8ff")),
+        "image/png":lambda b:b.startswith(bytes.fromhex("89504e470d0a1a0a")),
+        "image/webp":lambda b:len(b)>=12 and b[:4]==b"RIFF" and b[8:12]==b"WEBP",
+        "application/pdf":lambda b:b.startswith(b"%PDF-")}
+    if not data or not signatures[file.content_type](data): raise HTTPException(400,"محتوای فایل با نوع اعلام‌شده مطابقت ندارد")
+    safe_name=re.sub(r"[^A-Za-z0-9._-]","_",file.filename or "proof")[:120] or "proof"
+    row.proof_filename=safe_name;row.proof_content_type=file.content_type;row.proof_data=data;row.status="pending"
     db.commit();return {"success":True,"status":"pending"}
 
 @app.get("/api/wallet/deposit-requests/{request_id}/proof")

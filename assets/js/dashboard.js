@@ -311,6 +311,8 @@
       me=await api.get("/api/auth/me");if(!me||!me.id)throw new Error("اطلاعات حساب کاربری از سرور دریافت نشد.");
       setText("userName",me.full_name||me.username);setText("userRole",roleName(me.role));setText("menuUserName",me.full_name||me.username);setText("menuUserRole",roleName(me.role));setText("todayLabel",new Date().toLocaleDateString("fa-IR"));
       renderPermissions();
+      refreshFxRate();
+      setInterval(refreshFxRate,25000);
       const requested=location.hash.replace(/^#/,""),initial=labels[requested]&&id(requested+"Page")?requested:"dashboard";
       if(initial==="settings")submenu(true);showPage(initial,false);
     }catch(e){

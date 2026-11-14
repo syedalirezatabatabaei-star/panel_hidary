@@ -45,6 +45,20 @@
     if(updateHash!==false && location.hash!=="#"+target) history.replaceState(null,"","#"+target);
     if(loaders[target]) Promise.resolve(loaders[target]()).catch(e=>toast(e.message||"بارگذاری صفحه ناموفق بود."));
   }
+
+  async function refreshFxRate() {
+    try {
+      const fx=await api.get("/api/fx/rate");
+      const value=Number(fx.rate||0);
+      setText("fxRateValue",value>0?money(value):"نرخ در دسترس نیست");
+      const status=fx.status==="ok"?"به‌روز":fx.status==="stale"?"قدیمی":fx.status==="manual"?"دستی":fx.status==="error"?"خطا در دریافت":"در انتظار دریافت";
+      setText("fxRateStatus",status+(fx.age_seconds!=null?" · "+num(fx.age_seconds)+" ثانیه قبل":""));
+      setText("fxRateSource",fx.source||"TGJU");
+      if(fx.last_error&&me?.role==="admin")setText("fxRateError",fx.last_error);else setText("fxRateError","");
+    } catch(error) {
+      setText("fxRateStatus","عدم دریافت وضعیت نرخ");
+    }
+  }
   async function loadDashboard() {
     setText("dashboardStatus","در حال دریافت اطلاعات...");
     try {
@@ -131,7 +145,10 @@
     setText("paymentCardHolder",walletConfig.card_holder||"صاحب کارت"); setText("paymentIban",walletConfig.iban?"شبا: "+walletConfig.iban:"");
     setText("paymentBankDescription",walletConfig.bank_description||"پس از کارت‌به‌کارت، فیش پرداخت را ارسال کنید.");
     const amount=Number(id("depositAmount")?.value||0), currency=id("depositCurrency")?.value||"IRR", rate=Number(walletConfig.usd_irr_rate||0);
-    setText("paymentAmountDue","مبلغ قابل پرداخت به کارت: "+money(activeDepositData?activeDepositData.amount_irr:(currency==="USD"?amount*rate:amount)));
+    const base=Number(activeDepositData?.amount_irr??(currency==="USD"?amount*rate:amount));
+    const fee=Number(activeDepositData?.fee_irr??(base*Number(walletConfig.exchange_fee_percent||0)/100));
+    const total=Number(activeDepositData?.total_payable_irr??(base+fee));
+    setText("paymentAmountDue","اصل مبلغ: "+money(base)+" | کارمزد صراف ("+Number(activeDepositData?.fee_percent??walletConfig.exchange_fee_percent??0.5)+"٪): "+money(fee)+" | مبلغ نهایی قابل پرداخت: "+money(total));
     id("bankPaymentPanel")?.classList.remove("hidden");
   }
   function updateDepositConversion() {
@@ -150,11 +167,11 @@
     setHTML("depositRequestsTable",requests.length?requests.map(x=>{
       const own=Number(x.user_id)===Number(me.id);
       const actions=admin&&x.status==="pending"?'<button class="btn btn-primary deposit-approve" data-id="'+Number(x.id)+'" type="button">تأیید</button> <button class="btn btn-soft deposit-reject" data-id="'+Number(x.id)+'" type="button">رد</button>':(x.status==="awaiting_payment"&&own?'<button class="btn btn-soft continue-deposit" data-id="'+Number(x.id)+'" type="button">ادامه پرداخت</button>':"—");
-      return '<tr><td>'+esc(x.full_name||x.username)+'</td><td>'+money(x.entered_amount,x.currency)+'</td><td>'+walletStatus(x.status)+'</td><td>'+(x.proof_filename?'<button class="btn btn-soft proof-view" data-id="'+Number(x.id)+'" type="button">مشاهده فیش</button>':"—")+'</td><td>'+dateText(x.created_at,false)+'</td><td>'+actions+'</td></tr>';
+      return '<tr><td>'+esc(x.full_name||x.username)+'</td><td>'+money(x.entered_amount,x.currency)+'<small class="fee-breakdown">کارمزد: '+money(x.fee_irr||0)+'<br>پرداخت: '+money(x.total_payable_irr??x.amount_irr)+'</small></td><td>'+walletStatus(x.status)+'</td><td>'+(x.proof_filename?'<button class="btn btn-soft proof-view" data-id="'+Number(x.id)+'" type="button">مشاهده فیش</button>':"—")+'</td><td>'+dateText(x.created_at,false)+'</td><td>'+actions+'</td></tr>';
     }).join(""):'<tr><td colspan="6" class="report-empty">درخواستی ثبت نشده است.</td></tr>');
     $$(".continue-deposit").forEach(b=>b.addEventListener("click",()=>{
       const x=requests.find(r=>String(r.id)===b.dataset.id); if(!x) return;
-      activeDepositRequest=x.id; activeDepositData={amount_irr:x.amount_irr,amount_usd:x.amount_usd};
+      activeDepositRequest=x.id; activeDepositData={amount_irr:x.amount_irr,amount_usd:x.amount_usd,fee_percent:x.fee_percent,fee_irr:x.fee_irr,total_payable_irr:x.total_payable_irr};
       id("depositAmount").value=x.entered_amount; id("depositCurrency").value=x.currency;
       id("depositAmount").disabled=true; id("depositCurrency").disabled=true; showBankCard();
       id("paymentDoneBtn").classList.remove("hidden"); id("paymentDoneBtn").disabled=false; id("proofUploadForm").classList.add("hidden");
@@ -186,7 +203,15 @@
     setText("walletBalanceIrr",money(w.balance_irr)); setText("walletBalanceUsd",Number(w.usd_irr_rate)>0?money(w.balance_usd,"USD"):"نرخ تبدیل تنظیم نشده");
     id("walletConfigPanel")?.classList.toggle("hidden",me.role!=="admin");
     const form=id("walletConfigForm");
-    if(form) {Object.keys(walletConfig).forEach(k=>{if(form.elements[k])form.elements[k].value=walletConfig[k];});form.querySelectorAll("input,button").forEach(el=>el.disabled=me.role!=="admin");}
+    if(form) {
+      Object.keys(walletConfig).forEach(k=>{if(form.elements[k])form.elements[k].value=walletConfig[k];});
+      form.querySelectorAll("input,select,button").forEach(el=>el.disabled=me.role!=="admin");
+      const auto=form.elements.fx_auto_enabled,rateInput=form.elements.usd_irr_rate;
+      if(auto)auto.disabled=me.role!=="admin";
+      if(rateInput)rateInput.disabled=me.role!=="admin"||!!walletConfig.fx_auto_enabled;
+      setText("fxConfigStatus",walletConfig.fx_auto_enabled?"نرخ خودکار از TGJU دریافت می‌شود.":"حالت دستی فعال است؛ نرخ را مدیر تعیین می‌کند.");
+      setText("fxConfigLastUpdate",walletConfig.fx_updated_at?"آخرین دریافت: "+dateText(walletConfig.fx_updated_at,true):"هنوز نرخ خودکاری دریافت نشده است.");
+    }
     if(!activeDepositRequest) {if(id("depositAmount"))id("depositAmount").disabled=false;if(id("depositCurrency"))id("depositCurrency").disabled=false;}
     updateDepositConversion(); await loadWalletTables();
   }
@@ -249,9 +274,13 @@
       try{await api.post("/api/wallet/withdrawals",{amount_irr:amount,destination});toast("درخواست برداشت ثبت شد.");form.reset();await loadWallet();}
       catch(x){toast(x.message);}finally{busy(button,false);}
     });
+    id("walletConfigForm")?.elements.fx_auto_enabled?.addEventListener("change",e=>{
+      const rateInput=id("walletConfigForm")?.elements.usd_irr_rate;
+      if(rateInput)rateInput.disabled=e.target.value==="true";
+    });
     id("walletConfigForm")?.addEventListener("submit",async e=>{
       e.preventDefault();const form=e.currentTarget,button=$('button[type="submit"]',form);busy(button,true,"در حال ذخیره...");
-      try{await api.put("/api/wallet/config",Object.fromEntries(new FormData(form)));toast("اطلاعات کارت و نرخ تبدیل ذخیره شد.");await loadWallet();}
+      try{const payload=Object.fromEntries(new FormData(form));payload.fx_auto_enabled=payload.fx_auto_enabled==="true";await api.put("/api/wallet/config",payload);toast("تنظیمات نرخ و کارمزد ذخیره شد.");await loadWallet();}
       catch(x){toast(x.message);}finally{busy(button,false);}
     });
     id("logoutBtn")?.addEventListener("click",()=>{try{localStorage.removeItem("hidary_token");}catch(_){}location.replace("/login/");});

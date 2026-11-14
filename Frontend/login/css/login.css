@@ -44,3 +44,11 @@
   th,td{font-size:12px}
   .form-grid input,.form-grid select,.form-grid textarea{font-size:13px}
 }
+/* Mobile login: Milad Tower background and reliable password-eye visibility */
+.password-visibility{flex:0 0 36px;width:36px;height:36px;padding:0;cursor:pointer;touch-action:manipulation}
+.password-visibility:focus-visible{outline:2px solid #6488ad;outline-offset:2px;border-radius:7px}
+.password-visibility .eye-icon[hidden]{display:none!important}
+@media(max-width:600px){
+  .login-page{background-image:linear-gradient(180deg,rgba(8,26,45,.48),rgba(8,26,45,.76)),url('https://commons.wikimedia.org/wiki/Special:FilePath/Milad_tower_in_iran.jpg');background-position:center 38%;background-size:cover;background-attachment:scroll}
+  .login-v12{min-height:calc(100svh - 32px)}
+}

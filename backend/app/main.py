@@ -434,7 +434,7 @@ def list_withdrawals(user:User=Depends(current_user),db:Session=Depends(get_db))
     return [{"id":x.id,"user_id":x.user_id,"username":x.user.username,"amount_irr":float(abs(x.amount_irr)),"status":x.transaction_type,"description":x.description,"created_at":x.created_at.isoformat()} for x in q.all()]
 
 @app.post("/api/wallet/deposit-requests/{request_id}/review")
-def review_wallet_request(request_id:int,data:WalletReviewInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
+def review_wallet_request(request_id:int,data:WalletReviewInput,request:Request,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
     row=db.get(WalletRequest,request_id)
     if not row: raise HTTPException(404,"درخواست پیدا نشد")
     if row.status!="pending": raise HTTPException(400,"این درخواست قبلاً بررسی شده یا فیش ندارد")
@@ -445,10 +445,11 @@ def review_wallet_request(request_id:int,data:WalletReviewInput,actor:User=Depen
     if data.action=="approve":
         w=wallet_for(db,row.user_id);w.balance_irr=Decimal(w.balance_irr)+Decimal(row.amount_irr)
         db.add(WalletTransaction(user_id=row.user_id,actor_id=actor.id,transaction_type="deposit",amount_irr=row.amount_irr,balance_after_irr=w.balance_irr,description="تأیید افزایش موجودی #"+str(row.id),request_id=row.id))
+    audit_event(db,"wallet.deposit_reviewed",actor=actor,target_user_id=row.user_id,request=request,details={"request_id":row.id,"action":data.action})
     db.commit();return {"success":True,"status":row.status}
 
 @app.post("/api/wallet/withdrawals/{transaction_id}/review")
-def review_withdrawal(transaction_id:int,data:WalletReviewInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
+def review_withdrawal(transaction_id:int,data:WalletReviewInput,request:Request,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
     row=db.get(WalletTransaction,transaction_id)
     if not row or row.transaction_type!="withdrawal_pending": raise HTTPException(404,"درخواست برداشت پیدا نشد")
     if data.action not in ("approve","reject"): raise HTTPException(400,"عملیات نامعتبر است")
@@ -460,6 +461,7 @@ def review_withdrawal(transaction_id:int,data:WalletReviewInput,actor:User=Depen
         row.transaction_type="withdrawal_approved";row.balance_after_irr=w.balance_irr
     else:
         row.transaction_type="withdrawal_rejected";row.description += " | رد: "+(data.reason or "")[:300]
+    audit_event(db,"wallet.withdrawal_reviewed",actor=actor,target_user_id=row.user_id,request=request,details={"transaction_id":row.id,"action":data.action})
     db.commit();return {"success":True}
 
 @app.get("/api/wallet/config")

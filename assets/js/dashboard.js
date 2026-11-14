@@ -268,7 +268,12 @@
       renderPermissions();
       const requested=location.hash.replace(/^#/,""),initial=labels[requested]&&id(requested+"Page")?requested:"dashboard";
       if(initial==="settings")submenu(true);showPage(initial,false);
-    }catch(e){try{localStorage.removeItem("hidary_token");}catch(_){}location.replace("/login/");}
+    }catch(e){
+      // The API client redirects on HTTP 401. Keep valid tokens on network/5xx errors.
+      const message=e&&e.message?e.message:"خطا در دریافت اطلاعات حساب کاربری";
+      setText("pageTitle","خطا در اتصال به سامانه");
+      toast(message);
+    }
   }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init,{once:true}); else init();
 })();

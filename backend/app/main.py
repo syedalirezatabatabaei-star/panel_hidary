@@ -64,9 +64,9 @@ _fx_task=None
 @app.on_event("startup")
 async def startup():
     global _fx_task
+    ensure_user_session_version_column()
     seed()
     ensure_wallet_request_columns()
-    ensure_user_session_version_column()
     _fx_task=asyncio.create_task(tgju_rate_worker())
 
 @app.on_event("shutdown")
@@ -190,7 +190,7 @@ def permissions(user_id:int|None=None,actor:User=Depends(current_user),db:Sessio
     return {"pages":PAGES,"users":[{"id":u.id,"username":u.username,"full_name":u.full_name,"role":u.role} for u in accounts],
             "selected_user_id":selected.id if selected else None,"permissions":permissions}
 @app.put("/api/permissions")
-def set_permission(data:PermissionUpdate,actor:User=Depends(current_user),db:Session=Depends(get_db)):
+def set_permission(data:PermissionUpdate,request:Request,actor:User=Depends(current_user),db:Session=Depends(get_db)):
     if actor.role!="admin": raise HTTPException(403,"فقط مدیر کل می‌تواند دسترسی کاربران را مدیریت کند")
     if data.page_key not in PAGES: raise HTTPException(400,"صفحه نامعتبر است")
     target=db.get(User,data.user_id)
@@ -199,14 +199,14 @@ def set_permission(data:PermissionUpdate,actor:User=Depends(current_user),db:Ses
     p=db.query(UserPagePermission).filter_by(user_id=target.id,page_key=data.page_key).first()
     if not p:
         p=UserPagePermission(user_id=target.id,page_key=data.page_key);db.add(p)
-    p.can_view=data.can_view;p.can_edit=data.can_edit;db.commit();return {"success":True}
+    p.can_view=data.can_view;p.can_edit=data.can_edit;audit_event(db,"permission.updated",actor=actor,target_user_id=target.id,request=request,details={"page":data.page_key,"view":data.can_view,"edit":data.can_edit});db.commit();return {"success":True}
 @app.get("/api/coins/transactions")
 def transactions(user_id:int|None=None,actor:User=Depends(require_page("coins")),db:Session=Depends(get_db)):
     q=db.query(CoinTransaction).order_by(CoinTransaction.id.desc())
     if user_id: q=q.filter(CoinTransaction.user_id==user_id)
     return [{"id":t.id,"user_id":t.user_id,"username":t.user.username,"amount":t.amount,"balance_after":t.balance_after,"reason":t.reason,"created_at":t.created_at.isoformat()} for t in q.limit(200).all()]
 @app.post("/api/coins/adjust")
-def adjust(data:CoinChange,actor:User=Depends(require_page("coins",True)),db:Session=Depends(get_db)):
+def adjust(data:CoinChange,request:Request,actor:User=Depends(require_page("coins",True)),db:Session=Depends(get_db)):
     if data.amount==0: raise HTTPException(400,"مقدار نمی‌تواند صفر باشد")
     try:
         u=db.query(User).filter(User.id==data.user_id).with_for_update().one_or_none()
@@ -215,6 +215,7 @@ def adjust(data:CoinChange,actor:User=Depends(require_page("coins",True)),db:Ses
         if balance<0: raise HTTPException(400,"موجودی کافی نیست")
         u.coin_balance=balance
         db.add(CoinTransaction(user_id=u.id,actor_id=actor.id,amount=data.amount,balance_after=balance,reason=data.reason,reference=data.reference))
+        audit_event(db,"wallet.coin_adjusted",actor=actor,target_user_id=u.id,request=request,details={"amount":data.amount,"balance_after":balance})
         db.commit(); return {"success":True,"balance":balance}
     except Exception: db.rollback(); raise
 

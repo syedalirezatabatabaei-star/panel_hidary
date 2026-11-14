@@ -12,10 +12,6 @@
 
   let loginInProgress = false;
 
-  function readCurrentToken() {
-    try { return localStorage.getItem("hidary_token"); } catch (_) { return null; }
-  }
-
   function showError(message) {
     if (errorBox) errorBox.textContent = message || "";
   }
@@ -57,11 +53,9 @@
       payload.set("password", password);
 
       const result = await window.api.post("/api/auth/login", payload);
-      if (!result || !result.access_token) {
+      if (!result || !result.success) {
         throw new Error("پاسخ ورود از سرور معتبر نیست.");
       }
-
-      localStorage.setItem("hidary_token", result.access_token);
       window.location.assign("/dashboard/");
     } catch (error) {
       showError(error && error.message ? error.message : "ورود ناموفق بود.");
@@ -75,18 +69,7 @@
 
   // Keep an existing valid session shortcut, but never let this background
   // check interfere with a login the user has just submitted.
-  const existingToken = readCurrentToken();
-  if (existingToken) {
-    window.api.get("/api/auth/me").then(function () {
-      if (!loginInProgress && readCurrentToken() === existingToken) {
-        window.location.replace("/dashboard/");
-      }
-    }).catch(function () {
-      // api.js removes the token only when it is still the token this request used.
-      // Do not clear a newer token created by a concurrent successful login.
-      if (readCurrentToken() === existingToken) {
-        try { localStorage.removeItem("hidary_token"); } catch (_) {}
-      }
-    });
-  }
+  window.api.get("/api/auth/me").then(function () {
+    if (!loginInProgress) window.location.replace("/dashboard/");
+  }).catch(function () {});
 })();

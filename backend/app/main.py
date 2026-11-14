@@ -209,7 +209,7 @@ def fetch_tgju_rate():
     with urllib.request.urlopen(request,timeout=12) as response:
         html=response.read().decode("utf-8","replace")
     patterns=[
-        r'id=["\\']l-price_dollar_rl["\\'][^>]*>\\s*([0-9۰-۹٠-٩,٬.]+)',
+        r"""id=["']l-price_dollar_rl["'][^>]*>\s*([0-9۰-۹٠-٩,٬.]+)""",
         r'price_dollar_rl.{0,500}?([0-9۰-۹٠-٩][0-9۰-۹٠-٩,٬.]{5,})'
     ]
     for pattern in patterns:
@@ -220,11 +220,11 @@ def fetch_tgju_rate():
     raise ValueError("Could not extract price_dollar_rl from TGJU")
 
 def update_tgju_rate_once():
-    rate=fetch_tgju_rate()
     db=SessionLocal()
     try:
         if (setting(db,"fx_auto_enabled","true") or "true").lower() not in ("true","1","yes","on"):
             return None
+        rate=fetch_tgju_rate()
         set_setting(db,"usd_irr_rate",str(rate))
         set_setting(db,"fx_updated_at",datetime.utcnow().isoformat())
         set_setting(db,"fx_status","ok")
@@ -311,13 +311,13 @@ def create_wallet_request(data:WalletRequestInput,user:User=Depends(current_user
     if not setting(db,"card_number","").strip(): raise HTTPException(400,"اطلاعات کارت بانکی هنوز توسط مدیر ثبت نشده است")
     amount_irr=data.amount if currency=="IRR" else data.amount*rate
     amount_usd=data.amount if currency=="USD" else data.amount/rate
-    row=WalletRequest(user_id=user.id,entered_currency=currency,entered_amount=data.amount,amount_irr=amount_irr,amount_usd=amount_usd,fx_rate=rate,status="awaiting_payment")
-    db.add(row);db.commit();db.refresh(row)
     fee_percent=Decimal(setting(db,"exchange_fee_percent","0.5") or "0.5")
     fee_irr=(amount_irr*fee_percent/Decimal("100")).quantize(Decimal("0.01"),rounding=ROUND_HALF_UP)
     total_payable_irr=amount_irr+fee_irr
-    row.fee_percent=fee_percent;row.fee_irr=fee_irr;row.total_payable_irr=total_payable_irr
-    db.commit()
+    row=WalletRequest(user_id=user.id,entered_currency=currency,entered_amount=data.amount,amount_irr=amount_irr,
+      amount_usd=amount_usd,fx_rate=rate,fee_percent=fee_percent,fee_irr=fee_irr,
+      total_payable_irr=total_payable_irr,status="awaiting_payment")
+    db.add(row);db.commit();db.refresh(row)
     return {"id":row.id,"amount_irr":float(amount_irr),"amount_usd":float(amount_usd),"fee_percent":float(fee_percent),"fee_irr":float(fee_irr),"total_payable_irr":float(total_payable_irr),"status":row.status}
 
 @app.post("/api/wallet/deposit-requests/{request_id}/proof")

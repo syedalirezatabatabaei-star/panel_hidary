@@ -50,7 +50,9 @@
     try {
       const fx=await api.get("/api/fx/rate");
       const value=Number(fx.rate||0);
+      if(value>0&&walletConfig&&walletConfig.fx_auto_enabled)walletConfig.usd_irr_rate=value;
       setText("fxRateValue",value>0?money(value):"نرخ در دسترس نیست");
+      if(id("depositAmount")&&!activeDepositRequest)updateDepositConversion();
       const status=fx.status==="ok"?"به‌روز":fx.status==="stale"?"قدیمی":fx.status==="manual"?"دستی":fx.status==="error"?"خطا در دریافت":"در انتظار دریافت";
       setText("fxRateStatus",status+(fx.age_seconds!=null?" · "+num(fx.age_seconds)+" ثانیه قبل":""));
       setText("fxRateSource",fx.source||"TGJU");
@@ -146,7 +148,7 @@
     setText("paymentBankDescription",walletConfig.bank_description||"پس از کارت‌به‌کارت، فیش پرداخت را ارسال کنید.");
     const amount=Number(id("depositAmount")?.value||0), currency=id("depositCurrency")?.value||"IRR", rate=Number(walletConfig.usd_irr_rate||0);
     const base=Number(activeDepositData?.amount_irr??(currency==="USD"?amount*rate:amount));
-    const fee=Number(activeDepositData?.fee_irr??(base*Number(walletConfig.exchange_fee_percent||0)/100));
+    const fee=Number(activeDepositData?.fee_irr??(currency==="USD"?base*Number(walletConfig.exchange_fee_percent||0)/100:0));
     const total=Number(activeDepositData?.total_payable_irr??(base+fee));
     setText("paymentAmountDue","اصل مبلغ: "+money(base)+" | کارمزد صراف ("+Number(activeDepositData?.fee_percent??walletConfig.exchange_fee_percent??0.5)+"٪): "+money(fee)+" | مبلغ نهایی قابل پرداخت: "+money(total));
     id("bankPaymentPanel")?.classList.remove("hidden");

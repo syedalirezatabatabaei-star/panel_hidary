@@ -53,8 +53,10 @@ const api = {
       headers.set("Content-Type", "application/json");
     }
 
-    const token = readStorage("hidary_token");
-    if (token) headers.set("Authorization", "Bearer " + token);
+    // Capture the token used by this request. A delayed 401 from an old
+    // session must never erase a newer token issued by a successful login.
+    const tokenUsed = readStorage("hidary_token");
+    if (tokenUsed) headers.set("Authorization", "Bearer " + tokenUsed);
     if (!headers.has("Accept")) headers.set("Accept", "application/json");
 
     let response;
@@ -80,10 +82,19 @@ const api = {
 
     if (!response.ok) {
       if (response.status === 401) {
-        try { localStorage.removeItem("hidary_token"); } catch (_) {}
-        const pathName = window.location.pathname.toLowerCase();
-        if (pathName.indexOf("/login") === -1) {
-          window.location.replace("/login/");
+        const currentToken = readStorage("hidary_token");
+        // Act only if the failed request still belongs to the current session.
+        // If login replaced the old token while this request was in flight,
+        // ignore this stale 401 instead of logging the new session out.
+        const sameSession = tokenUsed ? currentToken === tokenUsed : !currentToken;
+        if (sameSession) {
+          if (tokenUsed) {
+            try { localStorage.removeItem("hidary_token"); } catch (_) {}
+          }
+          const pathName = window.location.pathname.toLowerCase();
+          if (pathName.indexOf("/login") === -1) {
+            window.location.replace("/login/");
+          }
         }
       }
       throw new Error(apiErrorMessage(data, response.status));

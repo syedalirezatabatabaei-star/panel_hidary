@@ -257,3 +257,10 @@ body.app-page{background:var(--page);color:var(--text);font-family:YekanBakh,Tah
 @media(max-width:600px){.main-content{padding:13px}.topbar{gap:9px}.topbar h1{font-size:21px}.profile-details{display:none}.welcome,.panel-heading,.report-toolbar{align-items:flex-start;flex-direction:column}.welcome{padding:18px;margin-top:18px}.welcome-actions,.report-tools{width:100%;justify-content:space-between}.stats-grid,.report-stats,.wallet-summary,.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.stat-card{min-height:105px;padding:12px;gap:9px}.stat-icon{width:36px;height:36px;flex-basis:36px}.stat-copy>strong{font-size:20px}.form-grid,.wallet-request-form{grid-template-columns:1fr}.permission-row{grid-template-columns:1fr 85px 85px}.withdrawal-request-list{grid-template-columns:1fr}.dashboard-section-heading{align-items:flex-start;flex-direction:column}}
 @media(max-width:390px){.dashboard-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}.stats-grid,.report-stats,.wallet-summary,.settings-grid{grid-template-columns:1fr}.topbar-actions{margin-right:0}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+@font-face{font-family:Peyda;src:url("../font/PeydaWeb-Regular.woff") format("woff");font-weight:400;font-display:swap}
+@font-face{font-family:Peyda;src:url("../font/PeydaWeb-Medium.woff") format("woff");font-weight:500;font-display:swap}
+@font-face{font-family:Peyda;src:url("../font/PeydaWeb-Bold.woff") format("woff");font-weight:700 900;font-display:swap}
+body.app-page{font-family:Peyda,YekanBakh,Tahoma,sans-serif}
+.topbar-search input{padding:0 44px 0 15px}

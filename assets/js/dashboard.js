@@ -138,7 +138,10 @@
   async function loadSystemSettings() {
     const d=await api.get("/api/system/config"), form=id("systemConfigForm"); if(!form) return;
     Object.keys(d||{}).forEach(k=>{if(form.elements[k]) form.elements[k].value=d[k];});
+    const n8nSetting=id("n8nVisibilitySetting");
+    if(n8nSetting)n8nSetting.classList.toggle("hidden",me?.role!=="admin");
     form.querySelectorAll("input,select,button").forEach(el=>el.disabled=!canEdit("systemSettings"));
+    if(form.elements.n8n_user_visible_limit)form.elements.n8n_user_visible_limit.disabled=me?.role!=="admin";
   }
   const money=(v,c)=>{const n=Number(v||0);return (Number.isFinite(n)?n:0).toLocaleString("en-US",{maximumFractionDigits:2})+(c==="USD"?" $":" ریال");};
   function showBankCard() {
@@ -252,7 +255,7 @@
       const url=URL.createObjectURL(new Blob(["\uFEFF"+rows.map(r=>r.map(quote).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}));
       const a=document.createElement("a");a.href=url;a.download="hidary-transactions.csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
     });
-    id("systemConfigForm")?.addEventListener("submit",async e=>{e.preventDefault();try{await api.put("/api/system/config",Object.fromEntries(new FormData(e.currentTarget)));toast("تنظیمات ذخیره شد.");}catch(x){toast(x.message);}});
+    id("systemConfigForm")?.addEventListener("submit",async e=>{e.preventDefault();try{const payload=Object.fromEntries(new FormData(e.currentTarget));if(me?.role!=="admin")delete payload.n8n_user_visible_limit;else payload.n8n_user_visible_limit=Number(payload.n8n_user_visible_limit);await api.put("/api/system/config",payload);toast("تنظیمات ذخیره شد.");}catch(x){toast(x.message);}});
     id("depositAmount")?.addEventListener("input",updateDepositConversion); id("depositCurrency")?.addEventListener("change",updateDepositConversion);
     id("depositRequestForm")?.addEventListener("submit",async e=>{
       e.preventDefault();const form=e.currentTarget,button=$('button[type="submit"]',form),amount=Number(id("depositAmount").value),currency=id("depositCurrency").value;

@@ -63,3 +63,33 @@
   }
   .login-v12{min-height:calc(100svh - 32px)}
 }
+
+
+/* Modern login experience */
+@font-face{font-family:Peyda;src:url("../../dashboard/font/PeydaWeb-Regular.woff") format("woff");font-weight:400;font-display:swap}
+@font-face{font-family:Peyda;src:url("../../dashboard/font/PeydaWeb-Medium.woff") format("woff");font-weight:500;font-display:swap}
+@font-face{font-family:Peyda;src:url("../../dashboard/font/PeydaWeb-Bold.woff") format("woff");font-weight:700 900;font-display:swap}
+body.login-page{min-height:100vh;padding:24px;display:grid;place-items:center;direction:rtl;font-family:Peyda,YekanBakh,Tahoma,sans-serif;background:#11162b url("../images/milad.jpg") center 42%/cover no-repeat fixed;position:relative;isolation:isolate}
+body.login-page:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(135deg,rgba(13,18,43,.94),rgba(31,37,77,.78) 55%,rgba(20,112,116,.38))}
+.login-v12{width:min(1100px,100%);min-height:min(690px,calc(100vh - 48px));display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:40px;padding:clamp(24px,5vw,64px);border:1px solid rgba(255,255,255,.18);border-radius:30px;background:rgba(18,23,48,.42);box-shadow:0 28px 90px rgba(4,8,25,.35);backdrop-filter:blur(18px);overflow:hidden}
+.login-v12-overlay{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 15% 18%,rgba(123,116,255,.25),transparent 35%),radial-gradient(circle at 85% 85%,rgba(30,190,170,.15),transparent 35%)}
+.login-v12-card{position:relative;z-index:1;grid-column:2;width:100%;max-width:430px;justify-self:center;padding:38px 36px 34px;border:1px solid rgba(255,255,255,.6);border-radius:24px;background:rgba(255,255,255,.97);box-shadow:0 24px 70px rgba(5,10,30,.24);text-align:right}
+.login-v12-avatar{width:76px;height:76px;margin:0 0 22px;border:1px solid #e8eaf4;border-radius:20px;background:#fff;box-shadow:0 8px 24px rgba(30,38,85,.08);overflow:hidden}
+.login-v12-avatar img{width:100%;height:100%;padding:8px;object-fit:contain}
+.login-v12-kicker{margin:0 0 7px;color:#625cf4;font-size:12px;font-weight:700}
+.login-v12-card h1{margin:0 0 10px;color:#20243d;font-size:25px;line-height:1.6;font-weight:800}
+.login-v12-subtitle{margin:0 0 25px;color:#858ba1;font-size:13px;line-height:2}
+.login-v12-form{display:grid;gap:14px}
+.login-v12-form>input,.login-v12-password{width:100%;height:52px;padding:0 15px;border:1px solid #e5e7f0;border-radius:13px;outline:0;background:#f9faff;color:#252a43;font-size:14px;text-align:right;transition:.2s}
+.login-v12-form>input:focus,.login-v12-password:focus-within{border-color:#aaa6ff;background:#fff;box-shadow:0 0 0 4px rgba(98,92,244,.09)}
+.login-v12-password{display:flex;align-items:center;gap:8px}.login-v12-password input{height:100%;min-width:0;flex:1;border:0;outline:0;background:transparent;color:#252a43;font:inherit}
+.password-visibility{width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:9px;background:transparent;color:#7d849c;cursor:pointer}
+.password-visibility:hover{background:#f0efff;color:#625cf4}.eye-icon{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.password-visibility .eye-icon{display:block!important}.password-visibility .eye-open{display:block!important}.password-visibility .eye-closed{display:none!important}.password-visibility.is-visible .eye-open{display:none!important}.password-visibility.is-visible .eye-closed{display:block!important}
+.form-error{min-height:18px;margin:0;color:#d34f67;font-size:12px;text-align:right}
+.login-v12-submit{height:52px;border:0;border-radius:13px;background:linear-gradient(120deg,#7069ff,#5750e8);color:#fff;font-size:15px;font-weight:800;box-shadow:0 9px 22px rgba(98,92,244,.22);transition:transform .2s,box-shadow .2s}
+.login-v12-submit:hover{transform:translateY(-2px);box-shadow:0 13px 28px rgba(98,92,244,.3)}.login-v12-submit:disabled{opacity:.65;cursor:wait}
+.login-v12-footer{position:relative;z-index:1;grid-column:1/-1;justify-self:center;margin:0;color:rgba(255,255,255,.72);font-size:11px}
+.login-v12:after{content:"HIDARY  /  MANAGEMENT PLATFORM";grid-column:1;grid-row:1;align-self:center;justify-self:center;max-width:390px;color:#fff;font:700 clamp(22px,3vw,38px)/1.8 Peyda,sans-serif;letter-spacing:1px;text-align:center;opacity:.92}
+@media(max-width:760px){body.login-page{padding:14px;background-attachment:scroll}.login-v12{min-height:calc(100svh - 28px);grid-template-columns:1fr;gap:20px;padding:22px;border-radius:22px}.login-v12-card{grid-column:1;grid-row:1;max-width:430px;padding:30px 24px}.login-v12:after{display:none}.login-v12-footer{grid-column:1}}
+@media(max-width:420px){.login-v12-card h1{font-size:21px}.login-v12-card{padding:26px 20px}}

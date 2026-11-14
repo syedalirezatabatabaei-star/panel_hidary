@@ -49,3 +49,15 @@ docker compose ps
 Database ports are not published on the host. Containers attached to `shared_network` connect using the service container names. Never commit `.env`.
 
 The backend environment file `backend/.env` is separate. If the backend runs inside Docker on `shared_network`, its MySQL `DATABASE_URL` hostname must be `panel-hidary-mysql`, not `127.0.0.1`.
+
+
+## Security and design update
+- Authentication uses an HttpOnly, SameSite=Strict session cookie; browser JavaScript no longer stores bearer tokens in localStorage.
+- In production, serve the panel through HTTPS and keep `COOKIE_SECURE=true`. For local HTTP development only, set `COOKIE_SECURE=false`; when serving the frontend separately, set `CORS_ORIGINS=http://127.0.0.1:5500` (use the exact frontend origin).
+- API documentation endpoints are disabled by default. Enable only in a trusted development environment with `API_DOCS_ENABLED=true`.
+- Login requests are rate-limited at the Nginx edge. Keep the backend behind the frontend reverse proxy and do not expose port 8000 publicly.
+- Password, role, and active-status changes increment the account session version and invalidate existing sessions. Role changes reset individual page permissions to the new role defaults.
+- Security events are recorded in `security_event_logs`; restrict database access and define an operational retention policy.
+- Deposit-proof uploads are read in bounded chunks, checked against file signatures, and limited to 5 MiB.
+- Compose separates the frontend/backend network from the private database network. MySQL and PostgreSQL are not attached to the frontend network.
+- The dashboard and login screens use a unified indigo/teal design system and local Peyda/Yekan Bakh fonts.

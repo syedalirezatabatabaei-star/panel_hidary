@@ -22,8 +22,14 @@
       toggleButton.setAttribute("aria-pressed", String(visible));
       const openIcon = toggleButton.querySelector(".eye-open");
       const closedIcon = toggleButton.querySelector(".eye-closed");
-      if (openIcon) openIcon.hidden = visible;
-      if (closedIcon) closedIcon.hidden = !visible;
+      if (openIcon) {
+        openIcon.hidden = visible;
+        openIcon.setAttribute("aria-hidden", String(visible));
+      }
+      if (closedIcon) {
+        closedIcon.hidden = !visible;
+        closedIcon.setAttribute("aria-hidden", String(!visible));
+      }
     });
   }
 

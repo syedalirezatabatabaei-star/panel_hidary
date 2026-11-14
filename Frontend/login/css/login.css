@@ -93,3 +93,66 @@ body.login-page:before{content:"";position:fixed;inset:0;z-index:-1;background:l
 .login-v12:after{content:"HIDARY  /  MANAGEMENT PLATFORM";grid-column:1;grid-row:1;align-self:center;justify-self:center;max-width:390px;color:#fff;font:700 clamp(22px,3vw,38px)/1.8 Peyda,sans-serif;letter-spacing:1px;text-align:center;opacity:.92}
 @media(max-width:760px){body.login-page{padding:14px;background-attachment:scroll}.login-v12{min-height:calc(100svh - 28px);grid-template-columns:1fr;gap:20px;padding:22px;border-radius:22px}.login-v12-card{grid-column:1;grid-row:1;max-width:430px;padding:30px 24px}.login-v12:after{display:none}.login-v12-footer{grid-column:1}}
 @media(max-width:420px){.login-v12-card h1{font-size:21px}.login-v12-card{padding:26px 20px}}
+
+
+/* Naqsh-e Jahan centered login refresh */
+body.login-page{
+  min-height:100vh;
+  padding:24px;
+  display:grid;
+  place-items:center;
+  background-color:#10243b;
+  background-image:linear-gradient(135deg,rgba(8,20,38,.76),rgba(8,20,38,.48)),url("https://commons.wikimedia.org/wiki/Special:FilePath/Naghshe-jahan_Square.jpg");
+  background-position:center;
+  background-size:cover;
+  background-repeat:no-repeat;
+  background-attachment:fixed;
+}
+.login-v12{
+  width:100%;
+  max-width:520px;
+  min-height:calc(100vh - 48px);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  padding:24px 0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+  overflow:visible;
+}
+.login-v12-card{
+  width:min(430px,100%);
+  max-width:430px;
+  margin:0 auto;
+  padding:38px 36px 34px;
+  text-align:center;
+}
+.login-v12-avatar{
+  width:92px;
+  height:92px;
+  margin:0 auto 20px;
+  border-radius:22px;
+}
+.login-v12-kicker{text-align:center}
+.login-v12-card h1,.login-v12-subtitle{text-align:center}
+.login-v12-form>input,
+.login-v12-password input{
+  text-align:center;
+}
+.login-v12-password input::placeholder{text-align:center}
+.login-v12-form .form-error{text-align:center}
+.login-v12:after{content:none!important;display:none!important}
+.login-v12-footer{margin-top:18px;text-align:center}
+@media(max-width:760px){
+  body.login-page{padding:14px;background-attachment:scroll}
+  .login-v12{min-height:calc(100svh - 28px);padding:14px 0}
+  .login-v12-card{width:100%;padding:30px 24px}
+}
+@media(max-width:420px){
+  .login-v12-card{padding:26px 20px}
+}

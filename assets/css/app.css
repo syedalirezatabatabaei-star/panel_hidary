@@ -10,6 +10,7 @@ button{cursor:pointer}
 button:disabled{cursor:not-allowed;opacity:.6}
 a{color:inherit}
 .hidden{display:none!important}
+.search-hidden{display:none!important}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .app-page{min-height:100vh}
 .sidebar{position:fixed;z-index:30;inset:0 0 0 auto;width:258px;display:flex;flex-direction:column;padding:24px 16px 18px;color:#e7eff7;background:linear-gradient(180deg,#173b63 0%,#153555 58%,#112d49 100%);border-left:1px solid #294d70;box-shadow:5px 0 22px rgba(10,30,52,.12);overflow-y:auto}

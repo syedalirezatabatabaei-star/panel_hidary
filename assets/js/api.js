@@ -83,7 +83,7 @@ const api = {
         try { localStorage.removeItem("hidary_token"); } catch (_) {}
         const pathName = window.location.pathname.toLowerCase();
         if (pathName.indexOf("/login") === -1) {
-          window.location.replace(new URL("../login/", window.location.href).href);
+          window.location.replace("/login/");
         }
       }
       throw new Error(apiErrorMessage(data, response.status));

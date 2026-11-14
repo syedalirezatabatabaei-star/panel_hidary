@@ -1,6 +1,6 @@
 import asyncio,json,logging,re,urllib.request
 from decimal import Decimal,ROUND_HALF_UP
-from fastapi import FastAPI,Depends,HTTPException,UploadFile,File
+from fastapi import FastAPI,Depends,HTTPException,UploadFile,File,Request,Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel,Field
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func,inspect,text
 from .config import settings
 from .database import Base,engine,SessionLocal,get_db
-from .models import User,PagePermission,UserPagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction
+from .models import User,PagePermission,UserPagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction,SecurityEventLog
 from .security import hash_password,verify_password,create_access_token,current_user
 from datetime import datetime
 app=FastAPI(title="Hidary Admin API",version="1.1.0",docs_url="/docs" if settings.api_docs_enabled else None,redoc_url="/redoc" if settings.api_docs_enabled else None,openapi_url="/openapi.json" if settings.api_docs_enabled else None)
@@ -52,12 +52,21 @@ def ensure_wallet_request_columns():
             if name not in existing:
                 connection.execute(text("ALTER TABLE wallet_requests ADD COLUMN "+name+" "+ddl))
 
+def ensure_user_session_version_column():
+    inspector=inspect(engine)
+    if "users" not in inspector.get_table_names(): return
+    columns={c["name"] for c in inspector.get_columns("users")}
+    if "session_version" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE users ADD COLUMN session_version INT NOT NULL DEFAULT 0"))
+
 _fx_task=None
 @app.on_event("startup")
 async def startup():
     global _fx_task
     seed()
     ensure_wallet_request_columns()
+    ensure_user_session_version_column()
     _fx_task=asyncio.create_task(tgju_rate_worker())
 
 @app.on_event("shutdown")
@@ -79,6 +88,12 @@ def require_page(page,edit=False):
             raise HTTPException(403,"دسترسی کافی ندارید")
         return user
     return check
+def audit_event(db:Session,event_type:str,actor:User|None=None,target_user_id:int|None=None,request:Request|None=None,details:dict|None=None):
+    ip=request.headers.get("x-real-ip") if request else None
+    if not ip and request and request.client: ip=request.client.host
+    agent=request.headers.get("user-agent","")[:500] if request else ""
+    db.add(SecurityEventLog(event_type=event_type,actor_id=actor.id if actor else None,target_user_id=target_user_id,source_ip=(ip or "")[:64],user_agent=agent,details=json.dumps(details or {},ensure_ascii=False)[:4000]))
+
 class UserCreate(BaseModel):
     username:str=Field(min_length=3,max_length=80); password:str=Field(min_length=8,max_length=128)
     full_name:str=Field(min_length=2,max_length=160); role:str="user"

@@ -42,7 +42,7 @@ services:
     volumes:
       - panel_hidary_postgres_data:/var/lib/postgresql/data
     networks:
-      - shared_network
+      - database_network
     healthcheck:
       test:
         - CMD-SHELL

@@ -189,7 +189,7 @@
       let popup=null;
       try {
         popup=window.open("about:blank","_blank"); if(!popup) throw new Error("مرورگر بازشدن پنجره جدید را مسدود کرد.");
-        const response=await fetch(API_BASE+"/api/wallet/deposit-requests/"+b.dataset.id+"/proof",{headers:{Authorization:"Bearer "+localStorage.getItem("hidary_token")}});
+        const response=await fetch(API_BASE+"/api/wallet/deposit-requests/"+b.dataset.id+"/proof",{credentials:"include"});
         if(!response.ok) {popup.close(); throw new Error("دریافت فیش ناموفق بود.");}
         const url=URL.createObjectURL(await response.blob()); popup.location.href=url; setTimeout(()=>URL.revokeObjectURL(url),60000);
       } catch(e) { if(popup&&!popup.closed) popup.close(); toast(e.message); }
@@ -288,7 +288,7 @@
       try{const payload=Object.fromEntries(new FormData(form));payload.fx_auto_enabled=payload.fx_auto_enabled==="true";if(!payload.usd_irr_rate)payload.usd_irr_rate=walletConfig.usd_irr_rate||0;await api.put("/api/wallet/config",payload);toast("تنظیمات نرخ و کارمزد ذخیره شد.");await loadWallet();}
       catch(x){toast(x.message);}finally{busy(button,false);}
     });
-    id("logoutBtn")?.addEventListener("click",()=>{try{localStorage.removeItem("hidary_token");}catch(_){}location.replace("/login/");});
+    id("logoutBtn")?.addEventListener("click",async()=>{try{await api.post("/api/auth/logout",{});}finally{location.replace("/login/");}});
     id("userMenuBtn")?.addEventListener("click",()=>{const menu=id("userMenu"),open=menu.classList.toggle("hidden")===false;id("userMenuBtn").setAttribute("aria-expanded",String(open));});
     document.addEventListener("click",e=>{if(!e.target.closest(".profile-menu-wrap"))closeUserMenu();});
     document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeUserMenu();submenu(false);}});
@@ -309,8 +309,6 @@
     });
   }
   async function init() {
-    let storedToken=null;try{storedToken=localStorage.getItem("hidary_token");}catch(_){}
-    if(!storedToken){location.replace("/login/");return;}
     bindEvents();let theme="light";try{theme=localStorage.getItem("hidary_theme")||"light";}catch(_){}setTheme(theme==="dark");
     try{
       me=await api.get("/api/auth/me");if(!me||!me.id)throw new Error("اطلاعات حساب کاربری از سرور دریافت نشد.");

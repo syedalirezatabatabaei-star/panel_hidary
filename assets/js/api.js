@@ -1,1 +1,146 @@
-const API_BASE=localStorage.getItem("hidary_api")||(location.protocol==="file:"?"http://127.0.0.1:8000":location.origin);const api={async request(path,options={}){const headers={...(options.headers||{})};const token=localStorage.getItem("hidary_token");if(token)headers.Authorization="Bearer "+token;if(options.body&&!(options.body instanceof FormData))headers["Content-Type"]="application/json";const res=await fetch(API_BASE+path,{...options,headers});const data=await res.json().catch(()=>({}));if(!res.ok){if(res.status===401){localStorage.removeItem("hidary_token");location.href="../login/"}throw new Error(data.detail||"خطا در ارتباط با سرور")}return data},get:p=>api.request(p),post:(p,b)=>api.request(p,{method:"POST",body:JSON.stringify(b)}),put:(p,b)=>api.request(p,{method:"PUT",body:JSON.stringify(b)})};function toast(s){const e=document.getElementById("toast");if(e){e.textContent=s;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),2500)}}function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}function num(n){return Number(n||0).toLocaleString("fa-IR")}
+"use strict";
+
+function readStorage(key) {
+  try { return localStorage.getItem(key); } catch (_) { return null; }
+}
+
+function normalizeApiBase(value) {
+  return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function resolveApiBase() {
+  const saved = readStorage("hidary_api");
+  if (saved) return normalizeApiBase(saved);
+
+  const host = window.location.hostname;
+  const port = window.location.port;
+  const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
+  const isFile = window.location.protocol === "file:";
+  if (isFile || (isLocal && port !== "8000")) {
+    return "http://127.0.0.1:8000";
+  }
+  return normalizeApiBase(window.location.origin);
+}
+
+const API_BASE = resolveApiBase();
+window.API_BASE = API_BASE;
+
+function apiErrorMessage(data, status) {
+  const detail = data && data.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(function (item) {
+      return item && item.msg ? item.msg : String(item);
+    }).join("؛ ");
+  }
+  if (data && typeof data.message === "string") return data.message;
+  return "درخواست ناموفق بود (کد " + status + ")";
+}
+
+const api = {
+  async request(path, options) {
+    const opts = options || {};
+    const headers = new Headers(opts.headers || {});
+    const body = opts.body;
+
+    if (body instanceof FormData) {
+      headers.delete("Content-Type");
+    } else if (body instanceof URLSearchParams) {
+      if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+      }
+    } else if (body !== undefined && body !== null && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+
+    const token = readStorage("hidary_token");
+    if (token) headers.set("Authorization", "Bearer " + token);
+    if (!headers.has("Accept")) headers.set("Accept", "application/json");
+
+    let response;
+    try {
+      response = await fetch(API_BASE + (String(path).startsWith("/") ? path : "/" + path), {
+        ...opts,
+        headers: headers,
+        credentials: opts.credentials || "same-origin"
+      });
+    } catch (error) {
+      throw new Error("ارتباط با سرور برقرار نشد. آدرس API: " + API_BASE);
+    }
+
+    let data = null;
+    const contentType = response.headers.get("content-type") || "";
+    if (response.status !== 204) {
+      if (contentType.indexOf("application/json") !== -1 || contentType.indexOf("+json") !== -1) {
+        data = await response.json().catch(function () { return null; });
+      } else {
+        data = await response.text().catch(function () { return ""; });
+      }
+    }
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        try { localStorage.removeItem("hidary_token"); } catch (_) {}
+        const pathName = window.location.pathname.toLowerCase();
+        if (pathName.indexOf("/login") === -1) {
+          window.location.replace(new URL("../login/", window.location.href).href);
+        }
+      }
+      throw new Error(apiErrorMessage(data, response.status));
+    }
+    return data;
+  },
+
+  get(path) {
+    return this.request(path, { method: "GET" });
+  },
+
+  post(path, body) {
+    const payload = body instanceof FormData || body instanceof URLSearchParams
+      ? body
+      : JSON.stringify(body === undefined ? {} : body);
+    return this.request(path, { method: "POST", body: payload });
+  },
+
+  put(path, body) {
+    return this.request(path, { method: "PUT", body: JSON.stringify(body || {}) });
+  },
+
+  patch(path, body) {
+    return this.request(path, { method: "PATCH", body: JSON.stringify(body || {}) });
+  }
+};
+
+window.api = api;
+
+function toast(message) {
+  const node = document.getElementById("toast");
+  if (!node) return;
+  node.textContent = String(message || "");
+  node.classList.add("show");
+  if (node._hideTimer) window.clearTimeout(node._hideTimer);
+  node._hideTimer = window.setTimeout(function () {
+    node.classList.remove("show");
+  }, 3200);
+}
+
+function esc(value) {
+  return String(value === null || value === undefined ? "" : value).replace(/[&<>"']/g, function (char) {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char];
+  });
+}
+
+function num(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed.toLocaleString("fa-IR") : "۰";
+}
+
+window.toast = toast;
+window.esc = esc;
+window.num = num;

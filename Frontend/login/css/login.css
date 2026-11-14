@@ -102,7 +102,7 @@ body.login-page{
   display:grid;
   place-items:center;
   background-color:#10243b;
-  background-image:linear-gradient(135deg,rgba(8,20,38,.76),rgba(8,20,38,.48)),url("https://commons.wikimedia.org/wiki/Special:FilePath/Naghshe-jahan_Square.jpg");
+  background-image:linear-gradient(135deg,rgba(8,20,38,.76),rgba(8,20,38,.48)),url("https://commons.wikimedia.org/wiki/Special:FilePath/Naqsh-e_Jahan_Square%2C_Isfahan.jpg");
   background-position:center;
   background-size:cover;
   background-repeat:no-repeat;

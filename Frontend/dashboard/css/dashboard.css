@@ -1,11 +1,11 @@
 /* Dashboard-only styles */
 .app-page{min-height:100vh}
 .sidebar{position:fixed;z-index:30;inset:0 0 0 auto;width:258px;display:flex;flex-direction:column;padding:24px 16px 18px;color:#e7eff7;background:linear-gradient(180deg,#173b63 0%,#153555 58%,#112d49 100%);border-left:1px solid #294d70;box-shadow:5px 0 22px rgba(10,30,52,.12);overflow-y:auto}
-.sidebar-brand{min-height:76px;display:flex;align-items:center;justify-content:flex-start;gap:6px;padding:0 8px 20px;border-bottom:1px solid rgba(235,243,250,.17)}
-.sidebar-brand-copy{flex:1;min-width:0;text-align:right;line-height:1.35}
+.sidebar-brand{min-height:76px;display:flex;align-items:center;justify-content:flex-start;gap:2px;padding:0 8px 20px;border-bottom:1px solid rgba(235,243,250,.17)}
+.sidebar-brand-copy{flex:0 1 auto;width:auto;min-width:0;text-align:right;line-height:1.25;margin:0;padding:0}
 .sidebar-brand-copy b,.sidebar-brand-copy small{display:block}
 .sidebar-brand-copy b{font-size:16px;font-weight:700;color:#f6f9fc}
-.sidebar-brand-copy small{margin-top:4px;font-size:11px;color:#c0d0df}
+.sidebar-brand-copy small{margin-top:1px;font-size:11px;color:#c0d0df}
 .sidebar-logo{width:50px;height:50px;flex:0 0 50px;object-fit:contain;border-radius:12px;background:#fff;padding:4px}
 .dashboard-nav{display:grid;align-content:start;gap:6px;margin-top:22px}
 .dashboard-nav>a{position:relative;min-height:46px;display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;text-decoration:none;color:#d8e3ed;font-size:13px;font-weight:500;transition:background .18s,color .18s}

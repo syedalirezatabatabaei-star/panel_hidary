@@ -81,18 +81,33 @@
     const select=id("coinUser");
     if(select) select.innerHTML='<option value="">انتخاب کاربر</option>'+list.map(u=>'<option value="'+Number(u.id)+'">'+esc(u.full_name)+' ('+esc(u.username)+')</option>').join("");
   }
-  async function loadPermissions() {
-    const data=await api.get("/api/permissions"), roles=data.roles||{}, box=id("permissionsContent"); if(!box) return;
-    box.innerHTML=Object.entries(roles).filter(([r])=>r!=="admin").map(([r,items])=>'<div class="role-block"><h4>'+roleName(r)+'</h4>'+(items||[]).map(p=>'<div class="permission-row"><span>'+esc(p.page_title)+'</span><label><input type="checkbox" data-role="'+esc(r)+'" data-page="'+esc(p.page_key)+'" data-kind="view" '+(p.can_view?"checked":"")+'> مشاهده</label><label><input type="checkbox" data-role="'+esc(r)+'" data-page="'+esc(p.page_key)+'" data-kind="edit" '+(p.can_edit?"checked":"")+'> ویرایش</label></div>').join("")+'</div>').join("");
-    $$("input[type=checkbox]",box).forEach(input=>{
+  async function loadPermissions(userId) {
+    const query=userId?"?user_id="+encodeURIComponent(userId):"";
+    const data=await api.get("/api/permissions"+query), box=id("permissionsContent"); if(!box) return;
+    const users=data.users||[], selected=String(data.selected_user_id||"");
+    let selector=id("permissionUserSelect");
+    if(selector){
+      selector.innerHTML=users.map(u=>'<option value="'+Number(u.id)+'">'+esc(u.full_name||u.username)+' ('+esc(u.username)+')</option>').join("");
+      selector.value=selected;
+      selector.disabled=!canEdit("permissions")||!users.length;
+    }
+    if(!selected){box.innerHTML='<p class="report-empty">ابتدا یک کاربر ایجاد کنید تا دسترسی اختصاصی او را تنظیم کنید.</p>';return;}
+    const perms=data.permissions||{};
+    box.innerHTML=Object.entries(data.pages||{}).map(([key,title])=>{
+      const p=perms[key]||{view:false,edit:false};
+      return '<div class="permission-row"><span>'+esc(title)+'</span><label><input type="checkbox" data-page="'+esc(key)+'" data-kind="view" '+(p.view?"checked":"")+'> مشاهده</label><label><input type="checkbox" data-page="'+esc(key)+'" data-kind="edit" '+(p.edit?"checked":"")+'> ویرایش</label></div>';
+    }).join("");
+    $("input[type=checkbox]",box).forEach(input=>{
       input.disabled=!canEdit("permissions");
       input.addEventListener("change",async()=>{
-        const row=input.closest(".role-block"), selector='[data-page="'+CSS.escape(input.dataset.page)+'"]';
-        const view=row.querySelector('[data-kind="view"]'+selector), edit=row.querySelector('[data-kind="edit"]'+selector);
-        if(edit.checked) view.checked=true;
-        if(input.dataset.kind==="view" && !view.checked) edit.checked=false;
-        try { await api.put("/api/permissions",{role:input.dataset.role,page_key:input.dataset.page,can_view:view.checked,can_edit:edit.checked}); toast("دسترسی ذخیره شد."); }
-        catch(e) { toast(e.message); await loadPermissions(); }
+        const selector='[data-page="'+CSS.escape(input.dataset.page)+'"]';
+        const view=box.querySelector('input[data-kind="view"]'+selector), edit=box.querySelector('input[data-kind="edit"]'+selector);
+        if(edit.checked)view.checked=true;
+        if(input.dataset.kind==="view"&&!view.checked)edit.checked=false;
+        try{
+          await api.put("/api/permissions",{user_id:Number(selected),page_key:input.dataset.page,can_view:view.checked,can_edit:edit.checked});
+          toast("دسترسی اختصاصی کاربر ذخیره شد.");
+        }catch(e){toast(e.message);await loadPermissions(selected);}
       });
     });
   }
@@ -184,6 +199,7 @@
   function closeUserMenu(){id("userMenu")?.classList.add("hidden");id("userMenuBtn")?.setAttribute("aria-expanded","false");}
   function bindEvents() {
     id("refreshDashboard")?.addEventListener("click",()=>loadDashboard().catch(e=>toast(e.message)));
+    id("permissionUserSelect")?.addEventListener("change",e=>loadPermissions(e.target.value).catch(x=>toast(x.message)));
     id("sideNav")?.addEventListener("click",e=>{
       const a=e.target.closest("a[data-page]"); if(!a||!id("sideNav").contains(a))return; e.preventDefault();
       if(a.dataset.page==="settings"){submenu();showPage("settings");return;} showPage(a.dataset.page);

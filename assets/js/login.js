@@ -10,6 +10,12 @@
   const submitButton = form.querySelector('button[type="submit"]');
   const toggleButton = document.getElementById("togglePassword");
 
+  let loginInProgress = false;
+
+  function readCurrentToken() {
+    try { return localStorage.getItem("hidary_token"); } catch (_) { return null; }
+  }
+
   function showError(message) {
     if (errorBox) errorBox.textContent = message || "";
   }
@@ -27,11 +33,14 @@
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
+    if (loginInProgress) return;
+    loginInProgress = true;
     showError("");
 
     const username = usernameInput ? usernameInput.value.trim() : "";
     const password = passwordInput ? passwordInput.value : "";
     if (!username || !password) {
+      loginInProgress = false;
       showError("نام کاربری و رمز عبور را وارد کنید.");
       return;
     }
@@ -56,6 +65,7 @@
       window.location.assign("/dashboard/");
     } catch (error) {
       showError(error && error.message ? error.message : "ورود ناموفق بود.");
+      loginInProgress = false;
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = originalLabel || "ورود به سامانه";
@@ -63,15 +73,20 @@
     }
   });
 
-  const existingToken = (function () {
-    try { return localStorage.getItem("hidary_token"); } catch (_) { return null; }
-  })();
-
+  // Keep an existing valid session shortcut, but never let this background
+  // check interfere with a login the user has just submitted.
+  const existingToken = readCurrentToken();
   if (existingToken) {
     window.api.get("/api/auth/me").then(function () {
-      window.location.replace("/dashboard/");
+      if (!loginInProgress && readCurrentToken() === existingToken) {
+        window.location.replace("/dashboard/");
+      }
     }).catch(function () {
-      try { localStorage.removeItem("hidary_token"); } catch (_) {}
+      // api.js removes the token only when it is still the token this request used.
+      // Do not clear a newer token created by a concurrent successful login.
+      if (readCurrentToken() === existingToken) {
+        try { localStorage.removeItem("hidary_token"); } catch (_) {}
+      }
     });
   }
 })();

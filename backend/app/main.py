@@ -1,15 +1,16 @@
+import asyncio,json,logging,re,urllib.request
+from decimal import Decimal,ROUND_HALF_UP
 from fastapi import FastAPI,Depends,HTTPException,UploadFile,File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel,Field
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func,inspect,text
 from .config import settings
 from .database import Base,engine,SessionLocal,get_db
 from .models import User,PagePermission,UserPagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction
 from .security import hash_password,verify_password,create_access_token,current_user
 from datetime import datetime
-from decimal import Decimal
 app=FastAPI(title="Hidary Admin API",version="1.0.0")
 app.add_middleware(CORSMiddleware,allow_origins=settings.allowed_origins,allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 PAGES={"dashboard":"داشبورد","products":"محصولات","addProduct":"افزودن محصول","sites":"سایت‌های پایش‌شده","aiTokens":"توکن هوش مصنوعی","settings":"تنظیمات","systemSettings":"تنظیمات کلی سیستم","reports":"گزارش‌ها","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت توکن"}
@@ -36,10 +37,37 @@ def seed():
                 if not own:
                     view,edit=role_defaults.get(key,(False,False))
                     db.add(UserPagePermission(user_id=account.id,page_key=key,can_view=view,can_edit=edit))
+        for key,value in {"fx_auto_enabled":"true","exchange_fee_percent":"0.5","fx_status":"waiting","fx_source":"TGJU"}.items():
+            if not db.get(SystemSetting,key): db.add(SystemSetting(key=key,value=value))
         db.commit()
     finally: db.close()
+
+def ensure_wallet_request_columns():
+    inspector=inspect(engine)
+    if "wallet_requests" not in inspector.get_table_names(): return
+    existing={column["name"] for column in inspector.get_columns("wallet_requests")}
+    additions={"fee_percent":"DECIMAL(7,4) NOT NULL DEFAULT 0","fee_irr":"DECIMAL(18,2) NOT NULL DEFAULT 0","total_payable_irr":"DECIMAL(18,2) NOT NULL DEFAULT 0"}
+    with engine.begin() as connection:
+        for name,ddl in additions.items():
+            if name not in existing:
+                connection.execute(text("ALTER TABLE wallet_requests ADD COLUMN "+name+" "+ddl))
+
+_fx_task=None
 @app.on_event("startup")
-def startup(): seed()
+async def startup():
+    global _fx_task
+    seed()
+    ensure_wallet_request_columns()
+    _fx_task=asyncio.create_task(tgju_rate_worker())
+
+@app.on_event("shutdown")
+async def shutdown():
+    global _fx_task
+    if _fx_task:
+        _fx_task.cancel()
+        try: await _fx_task
+        except asyncio.CancelledError: pass
+        _fx_task=None
 def require_page(page,edit=False):
     def check(user:User=Depends(current_user),db:Session=Depends(get_db)):
         if user.role=="admin": return user
@@ -156,6 +184,72 @@ def set_setting(db,key,value):
     if not row: row=SystemSetting(key=key,value=str(value)); db.add(row)
     else: row.value=str(value)
 
+def _digits_to_ascii(value):
+    table=str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩","01234567890123456789")
+    return str(value).translate(table)
+
+def _parse_rate_value(value):
+    cleaned=re.sub(r"[^0-9.]","",_digits_to_ascii(value or ""))
+    rate=Decimal(cleaned) if cleaned else Decimal("0")
+    if rate<100000 or rate>1000000000:
+        raise ValueError("TGJU returned an implausible USD/IRR rate")
+    return rate
+
+def fetch_tgju_rate():
+    headers={"User-Agent":"Mozilla/5.0 (compatible; HidaryRateBot/1.0)","Accept":"application/json,text/html"}
+    request=urllib.request.Request("https://call1.tgju.org/ajax.json",headers=headers)
+    try:
+        with urllib.request.urlopen(request,timeout=12) as response:
+            payload=json.loads(response.read().decode("utf-8","replace"))
+        raw=payload.get("current",{}).get("price_dollar_rl",{}).get("p")
+        return _parse_rate_value(raw)
+    except Exception as api_error:
+        logging.warning("TGJU JSON feed failed: %s",api_error)
+    request=urllib.request.Request("https://www.tgju.org/profile/price_dollar_rl",headers=headers)
+    with urllib.request.urlopen(request,timeout=12) as response:
+        html=response.read().decode("utf-8","replace")
+    patterns=[
+        r'id=["\\']l-price_dollar_rl["\\'][^>]*>\\s*([0-9۰-۹٠-٩,٬.]+)',
+        r'price_dollar_rl.{0,500}?([0-9۰-۹٠-٩][0-9۰-۹٠-٩,٬.]{5,})'
+    ]
+    for pattern in patterns:
+        match=re.search(pattern,html,re.I|re.S)
+        if match:
+            try: return _parse_rate_value(match.group(1))
+            except ValueError: pass
+    raise ValueError("Could not extract price_dollar_rl from TGJU")
+
+def update_tgju_rate_once():
+    rate=fetch_tgju_rate()
+    db=SessionLocal()
+    try:
+        if (setting(db,"fx_auto_enabled","true") or "true").lower() not in ("true","1","yes","on"):
+            return None
+        set_setting(db,"usd_irr_rate",str(rate))
+        set_setting(db,"fx_updated_at",datetime.utcnow().isoformat())
+        set_setting(db,"fx_status","ok")
+        set_setting(db,"fx_source","TGJU")
+        set_setting(db,"fx_last_error","")
+        db.commit()
+        return rate
+    finally: db.close()
+
+async def tgju_rate_worker():
+    while True:
+        try:
+            await asyncio.to_thread(update_tgju_rate_once)
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            logging.exception("Automatic TGJU rate update failed")
+            db=SessionLocal()
+            try:
+                set_setting(db,"fx_status","error")
+                set_setting(db,"fx_last_error",str(error)[:500])
+                db.commit()
+            finally: db.close()
+        await asyncio.sleep(25)
+
 def wallet_for(db,user_id):
     row=db.query(WalletAccount).filter_by(user_id=user_id).with_for_update().one_or_none()
     if not row:
@@ -177,6 +271,8 @@ class WalletReviewInput(BaseModel):
     reason:str|None=None
 class WalletConfigInput(BaseModel):
     usd_irr_rate:Decimal=Field(gt=0)
+    fx_auto_enabled:bool=True
+    exchange_fee_percent:Decimal=Field(default=Decimal("0.5"),ge=0,le=100)
     bank_name:str=Field(max_length=120)
     card_holder:str=Field(max_length=160)
     card_number:str=Field(max_length=40)
@@ -202,7 +298,8 @@ def wallet_requests(user:User=Depends(current_user),db:Session=Depends(get_db)):
     if user.role!="admin": q=q.filter(WalletRequest.user_id==user.id)
     return [{"id":x.id,"user_id":x.user_id,"username":x.user.username,"full_name":x.user.full_name,
       "currency":x.entered_currency,"entered_amount":float(x.entered_amount),"amount_irr":float(x.amount_irr),
-      "amount_usd":float(x.amount_usd),"status":x.status,"proof_filename":x.proof_filename,
+      "amount_usd":float(x.amount_usd),"fee_percent":float(x.fee_percent or 0),"fee_irr":float(x.fee_irr or 0),
+      "total_payable_irr":float(x.total_payable_irr or x.amount_irr),"status":x.status,"proof_filename":x.proof_filename,
       "rejection_reason":x.rejection_reason,"created_at":x.created_at.isoformat(),"type":"deposit"} for x in q.all()]
 
 @app.post("/api/wallet/deposit-requests",status_code=201)
@@ -216,7 +313,12 @@ def create_wallet_request(data:WalletRequestInput,user:User=Depends(current_user
     amount_usd=data.amount if currency=="USD" else data.amount/rate
     row=WalletRequest(user_id=user.id,entered_currency=currency,entered_amount=data.amount,amount_irr=amount_irr,amount_usd=amount_usd,fx_rate=rate,status="awaiting_payment")
     db.add(row);db.commit();db.refresh(row)
-    return {"id":row.id,"amount_irr":float(amount_irr),"amount_usd":float(amount_usd),"status":row.status}
+    fee_percent=Decimal(setting(db,"exchange_fee_percent","0.5") or "0.5")
+    fee_irr=(amount_irr*fee_percent/Decimal("100")).quantize(Decimal("0.01"),rounding=ROUND_HALF_UP)
+    total_payable_irr=amount_irr+fee_irr
+    row.fee_percent=fee_percent;row.fee_irr=fee_irr;row.total_payable_irr=total_payable_irr
+    db.commit()
+    return {"id":row.id,"amount_irr":float(amount_irr),"amount_usd":float(amount_usd),"fee_percent":float(fee_percent),"fee_irr":float(fee_irr),"total_payable_irr":float(total_payable_irr),"status":row.status}
 
 @app.post("/api/wallet/deposit-requests/{request_id}/proof")
 async def upload_wallet_proof(request_id:int,file:UploadFile=File(...),user:User=Depends(current_user),db:Session=Depends(get_db)):
@@ -289,12 +391,35 @@ def review_withdrawal(transaction_id:int,data:WalletReviewInput,actor:User=Depen
 
 @app.get("/api/wallet/config")
 def get_wallet_config(user:User=Depends(current_user),db:Session=Depends(get_db)):
-    return {"usd_irr_rate":setting(db,"usd_irr_rate","0"),"bank_name":setting(db,"bank_name",""),"card_holder":setting(db,"card_holder",""),"card_number":setting(db,"card_number",""),"iban":setting(db,"iban",""),"bank_description":setting(db,"bank_description","")}
+    return {"usd_irr_rate":setting(db,"usd_irr_rate","0"),"fx_auto_enabled":(setting(db,"fx_auto_enabled","true").lower() in ("true","1","yes","on")),
+      "fx_updated_at":setting(db,"fx_updated_at",""),"fx_status":setting(db,"fx_status","waiting"),"fx_source":setting(db,"fx_source","TGJU"),
+      "fx_last_error":setting(db,"fx_last_error",""),"exchange_fee_percent":setting(db,"exchange_fee_percent","0.5"),
+      "bank_name":setting(db,"bank_name",""),"card_holder":setting(db,"card_holder",""),"card_number":setting(db,"card_number",""),"iban":setting(db,"iban",""),"bank_description":setting(db,"bank_description","")}
 
 @app.put("/api/wallet/config")
 def update_wallet_config(data:WalletConfigInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
-    for k,v in data.model_dump().items(): set_setting(db,k,v)
+    values=data.model_dump()
+    for k,v in values.items():
+        set_setting(db,k,("true" if v else "false") if isinstance(v,bool) else v)
+    set_setting(db,"fx_status","manual" if not values["fx_auto_enabled"] else "waiting")
     db.commit();return {"success":True}
+
+@app.get("/api/fx/rate")
+def get_fx_rate(user:User=Depends(current_user),db:Session=Depends(get_db)):
+    rate=Decimal(setting(db,"usd_irr_rate","0") or "0")
+    updated=setting(db,"fx_updated_at","")
+    status=setting(db,"fx_status","waiting")
+    age=None
+    if updated:
+        try: age=max(0,int((datetime.utcnow()-datetime.fromisoformat(updated)).total_seconds()))
+        except Exception: age=None
+    stale=bool(age is not None and age>90 and setting(db,"fx_auto_enabled","true").lower() in ("true","1","yes","on"))
+    if stale and status=="ok": status="stale"
+    return {"rate":float(rate),"unit":"IRR","source":setting(db,"fx_source","TGJU"),
+      "updated_at":updated,"age_seconds":age,"status":status,"stale":stale,
+      "auto_enabled":setting(db,"fx_auto_enabled","true").lower() in ("true","1","yes","on"),
+      "exchange_fee_percent":float(Decimal(setting(db,"exchange_fee_percent","0.5") or "0.5")),
+      "last_error":setting(db,"fx_last_error","") if user.role=="admin" else ""}
 
 @app.get("/api/system/config")
 def get_system_config(user:User=Depends(current_user),db:Session=Depends(get_db)):

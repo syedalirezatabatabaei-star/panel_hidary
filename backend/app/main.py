@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from .config import settings
 from .database import Base,engine,SessionLocal,get_db
-from .models import User,PagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction
+from .models import User,PagePermission,UserPagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction
 from .security import hash_password,verify_password,create_access_token,current_user
 from datetime import datetime
 from decimal import Decimal
@@ -26,6 +26,16 @@ def seed():
             for key,(view,edit) in pages.items():
                 p=db.query(PagePermission).filter_by(role=role,page_key=key).first()
                 if not p: db.add(PagePermission(role=role,page_key=key,can_view=view,can_edit=edit))
+        db.flush()
+        # Backfill individual permissions for existing accounts. Existing
+        # per-user choices are never overwritten by role defaults.
+        for account in db.query(User).filter(User.role!="admin").all():
+            role_defaults=DEFAULTS.get(account.role,DEFAULTS["user"])
+            for key in PAGES:
+                own=db.query(UserPagePermission).filter_by(user_id=account.id,page_key=key).first()
+                if not own:
+                    view,edit=role_defaults.get(key,(False,False))
+                    db.add(UserPagePermission(user_id=account.id,page_key=key,can_view=view,can_edit=edit))
         db.commit()
     finally: db.close()
 @app.on_event("startup")
@@ -33,8 +43,12 @@ def startup(): seed()
 def require_page(page,edit=False):
     def check(user:User=Depends(current_user),db:Session=Depends(get_db)):
         if user.role=="admin": return user
-        p=db.query(PagePermission).filter_by(role=user.role,page_key=page).first()
-        if not p or not p.can_view or (edit and not p.can_edit): raise HTTPException(403,"دسترسی کافی ندارید")
+        # An explicit per-user permission takes precedence over the role template.
+        p=db.query(UserPagePermission).filter_by(user_id=user.id,page_key=page).first()
+        if not p:
+            p=db.query(PagePermission).filter_by(role=user.role,page_key=page).first()
+        if not p or not p.can_view or (edit and not p.can_edit):
+            raise HTTPException(403,"دسترسی کافی ندارید")
         return user
     return check
 class UserCreate(BaseModel):
@@ -44,7 +58,7 @@ class UserUpdate(BaseModel):
     full_name:str|None=None; role:str|None=None; is_active:bool|None=None
     password:str|None=Field(default=None,min_length=8,max_length=128)
 class PermissionUpdate(BaseModel):
-    role:str; page_key:str; can_view:bool; can_edit:bool
+    user_id:int; page_key:str; can_view:bool; can_edit:bool
 class CoinChange(BaseModel):
     user_id:int; amount:int; reason:str=Field(min_length=2,max_length=255); reference:str|None=None
 @app.get("/api/health")
@@ -56,8 +70,12 @@ def login(form:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
     return {"access_token":create_access_token(u.id),"token_type":"bearer"}
 @app.get("/api/auth/me")
 def me(user:User=Depends(current_user),db:Session=Depends(get_db)):
-    ps=db.query(PagePermission).filter_by(role=user.role).all()
-    return {"id":user.id,"username":user.username,"full_name":user.full_name,"role":user.role,"coin_balance":user.coin_balance,"permissions":{p.page_key:{"view":p.can_view,"edit":p.can_edit} for p in ps}}
+    if user.role=="admin":
+        permissions={key:{"view":True,"edit":True} for key in PAGES}
+    else:
+        ps=db.query(UserPagePermission).filter_by(user_id=user.id).all()
+        permissions={p.page_key:{"view":p.can_view,"edit":p.can_edit} for p in ps}
+    return {"id":user.id,"username":user.username,"full_name":user.full_name,"role":user.role,"coin_balance":user.coin_balance,"permissions":permissions}
 @app.get("/api/dashboard")
 def dashboard(user:User=Depends(require_page("dashboard")),db:Session=Depends(get_db)):
     recent=db.query(CoinTransaction).order_by(CoinTransaction.id.desc()).limit(8).all()
@@ -69,7 +87,12 @@ def users(user:User=Depends(require_page("users")),db:Session=Depends(get_db)):
 def create_user(data:UserCreate,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
     if data.role not in DEFAULTS: raise HTTPException(400,"نقش نامعتبر است")
     if db.query(User).filter_by(username=data.username).first(): raise HTTPException(409,"نام کاربری تکراری است")
-    u=User(username=data.username,full_name=data.full_name,role=data.role,password_hash=hash_password(data.password)); db.add(u); db.commit(); db.refresh(u)
+    u=User(username=data.username,full_name=data.full_name,role=data.role,password_hash=hash_password(data.password)); db.add(u); db.flush()
+    role_defaults=DEFAULTS.get(data.role,DEFAULTS["user"])
+    for key in PAGES:
+        view,edit=role_defaults.get(key,(False,False))
+        db.add(UserPagePermission(user_id=u.id,page_key=key,can_view=view,can_edit=edit))
+    db.commit(); db.refresh(u)
     return {"id":u.id,"username":u.username}
 @app.patch("/api/users/{uid}")
 def update_user(uid:int,data:UserUpdate,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
@@ -84,15 +107,26 @@ def update_user(uid:int,data:UserUpdate,actor:User=Depends(require_page("users",
     if data.password: u.password_hash=hash_password(data.password)
     db.commit(); return {"success":True}
 @app.get("/api/permissions")
-def permissions(actor:User=Depends(require_page("permissions")),db:Session=Depends(get_db)):
-    return {"pages":PAGES,"roles":{r:[{"page_key":p.page_key,"page_title":PAGES[p.page_key],"can_view":p.can_view,"can_edit":p.can_edit} for p in db.query(PagePermission).filter_by(role=r).all()] for r in DEFAULTS}}
+def permissions(user_id:int|None=None,actor:User=Depends(current_user),db:Session=Depends(get_db)):
+    if actor.role!="admin": raise HTTPException(403,"فقط مدیر کل می‌تواند دسترسی کاربران را مدیریت کند")
+    accounts=db.query(User).filter(User.role!="admin").order_by(User.id.asc()).all()
+    selected=db.get(User,user_id) if user_id else (accounts[0] if accounts else None)
+    if selected and selected.role=="admin": raise HTTPException(400,"دسترسی مدیر کل قابل تغییر نیست")
+    rows=db.query(UserPagePermission).filter_by(user_id=selected.id).all() if selected else []
+    permissions={p.page_key:{"view":p.can_view,"edit":p.can_edit} for p in rows}
+    return {"pages":PAGES,"users":[{"id":u.id,"username":u.username,"full_name":u.full_name,"role":u.role} for u in accounts],
+            "selected_user_id":selected.id if selected else None,"permissions":permissions}
 @app.put("/api/permissions")
-def set_permission(data:PermissionUpdate,actor:User=Depends(require_page("permissions",True)),db:Session=Depends(get_db)):
-    if data.role not in DEFAULTS or data.role=="admin" or data.page_key not in PAGES: raise HTTPException(400,"نقش یا صفحه نامعتبر است")
+def set_permission(data:PermissionUpdate,actor:User=Depends(current_user),db:Session=Depends(get_db)):
+    if actor.role!="admin": raise HTTPException(403,"فقط مدیر کل می‌تواند دسترسی کاربران را مدیریت کند")
+    if data.page_key not in PAGES: raise HTTPException(400,"صفحه نامعتبر است")
+    target=db.get(User,data.user_id)
+    if not target or target.role=="admin": raise HTTPException(404,"کاربر قابل ویرایش پیدا نشد")
     if data.can_edit and not data.can_view: raise HTTPException(400,"ویرایش بدون مشاهده مجاز نیست")
-    p=db.query(PagePermission).filter_by(role=data.role,page_key=data.page_key).first()
-    if not p: p=PagePermission(role=data.role,page_key=data.page_key); db.add(p)
-    p.can_view=data.can_view; p.can_edit=data.can_edit; db.commit(); return {"success":True}
+    p=db.query(UserPagePermission).filter_by(user_id=target.id,page_key=data.page_key).first()
+    if not p:
+        p=UserPagePermission(user_id=target.id,page_key=data.page_key);db.add(p)
+    p.can_view=data.can_view;p.can_edit=data.can_edit;db.commit();return {"success":True}
 @app.get("/api/coins/transactions")
 def transactions(user_id:int|None=None,actor:User=Depends(require_page("coins")),db:Session=Depends(get_db)):
     q=db.query(CoinTransaction).order_by(CoinTransaction.id.desc())

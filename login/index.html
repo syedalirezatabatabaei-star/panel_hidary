@@ -36,16 +36,6 @@
   </main>
   <script src="../assets/js/api.js"></script>
   <script src="../assets/js/login.js"></script>
-  <script>
-    const passwordInput = document.getElementById("password");
-    document.getElementById("togglePassword").addEventListener("click", function () {
-      const visible = passwordInput.type === "password";
-      passwordInput.type = visible ? "text" : "password";
-      this.setAttribute("aria-label", visible ? "پنهان کردن رمز عبور" : "نمایش رمز عبور");
-      this.setAttribute("aria-pressed", String(visible));
-      this.querySelector(".eye-open").hidden = visible;
-      this.querySelector(".eye-closed").hidden = !visible;
-    });
-  </script>
+
 </body>
 </html>

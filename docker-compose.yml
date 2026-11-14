@@ -18,7 +18,7 @@ services:
     volumes:
       - panel_hidary_mysql_data:/var/lib/mysql
     networks:
-      - shared_network
+      - database_network
     healthcheck:
       test:
         - CMD-SHELL
@@ -42,7 +42,7 @@ services:
     volumes:
       - panel_hidary_postgres_data:/var/lib/postgresql/data
     networks:
-      - shared_network
+      - database_network
     healthcheck:
       test:
         - CMD-SHELL
@@ -68,6 +68,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in root .env}
       ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-مدیر کل}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      API_DOCS_ENABLED: ${API_DOCS_ENABLED:-false}
       TZ: UTC
     depends_on:
       mysql:
@@ -75,7 +77,8 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     networks:
-      - shared_network
+      - database_network
+      - frontend_backend
     healthcheck:
       test:
         - CMD
@@ -105,12 +108,18 @@ services:
       backend:
         condition: service_healthy
     networks:
+      - frontend_backend
       - shared_network
 
 networks:
   shared_network:
     external: true
     name: shared_network
+  frontend_backend:
+    driver: bridge
+  database_network:
+    driver: bridge
+    internal: true
 
 volumes:
   panel_hidary_mysql_data:

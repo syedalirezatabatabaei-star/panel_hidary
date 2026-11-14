@@ -11,6 +11,7 @@ class User(Base):
     role:Mapped[str]=mapped_column(String(30),default="user")
     is_active:Mapped[bool]=mapped_column(Boolean,default=True)
     coin_balance:Mapped[int]=mapped_column(Integer,default=0)
+    session_version:Mapped[int]=mapped_column(Integer,default=0,nullable=False)
     created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
     transactions=relationship("CoinTransaction",back_populates="user",foreign_keys="CoinTransaction.user_id")
 class PagePermission(Base):
@@ -89,3 +90,15 @@ class WalletTransaction(Base):
     request_id:Mapped[int|None]=mapped_column(ForeignKey("wallet_requests.id"),nullable=True)
     created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
     user=relationship("User",foreign_keys=[user_id])
+
+
+class SecurityEventLog(Base):
+    __tablename__="security_event_logs"
+    id:Mapped[int]=mapped_column(Integer,primary_key=True)
+    event_type:Mapped[str]=mapped_column(String(80),index=True)
+    actor_id:Mapped[int|None]=mapped_column(ForeignKey("users.id",ondelete="SET NULL"),nullable=True,index=True)
+    target_user_id:Mapped[int|None]=mapped_column(ForeignKey("users.id",ondelete="SET NULL"),nullable=True,index=True)
+    source_ip:Mapped[str]=mapped_column(String(64),default="")
+    user_agent:Mapped[str]=mapped_column(String(500),default="")
+    details:Mapped[str]=mapped_column(Text,default="")
+    created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow,index=True)

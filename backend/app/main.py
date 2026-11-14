@@ -1,6 +1,6 @@
 import asyncio,json,logging,re,urllib.request
 from decimal import Decimal,ROUND_HALF_UP
-from fastapi import FastAPI,Depends,HTTPException,UploadFile,File
+from fastapi import FastAPI,Depends,HTTPException,UploadFile,File,Request,Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel,Field
@@ -8,11 +8,24 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func,inspect,text
 from .config import settings
 from .database import Base,engine,SessionLocal,get_db
-from .models import User,PagePermission,UserPagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction
+from .models import User,PagePermission,UserPagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction,SecurityEventLog
 from .security import hash_password,verify_password,create_access_token,current_user
 from datetime import datetime
-app=FastAPI(title="Hidary Admin API",version="1.0.0")
+from urllib.parse import urlsplit
+from fastapi.responses import JSONResponse
+app=FastAPI(title="Hidary Admin API",version="1.1.0",docs_url="/docs" if settings.api_docs_enabled else None,redoc_url="/redoc" if settings.api_docs_enabled else None,openapi_url="/openapi.json" if settings.api_docs_enabled else None)
 app.add_middleware(CORSMiddleware,allow_origins=settings.allowed_origins,allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
+
+@app.middleware("http")
+async def protect_cookie_mutations(request:Request,call_next):
+    if request.method in {"POST","PUT","PATCH","DELETE"} and request.cookies.get("hidary_session"):
+        origin=request.headers.get("origin","")
+        origin_host=urlsplit(origin).netloc.lower() if origin else ""
+        request_host=request.headers.get("host","").lower()
+        configured_hosts={urlsplit(value).netloc.lower() for value in settings.allowed_origins}
+        if not origin_host or (origin_host!=request_host and origin_host not in configured_hosts):
+            return JSONResponse(status_code=403,content={"detail":"درخواست از مبدأ مجاز نیست"})
+    return await call_next(request)
 PAGES={"dashboard":"داشبورد","products":"محصولات","addProduct":"افزودن محصول","sites":"سایت‌های پایش‌شده","aiTokens":"توکن هوش مصنوعی","settings":"تنظیمات","systemSettings":"تنظیمات کلی سیستم","reports":"گزارش‌ها","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت توکن"}
 DEFAULTS={"admin":{k:(True,True) for k in PAGES},"manager":{"dashboard":(True,False),"users":(True,True),"permissions":(False,False),"coins":(True,True),"reports":(True,False),"aiTokens":(True,False),"settings":(True,False)},"user":{"dashboard":(True,False),"aiTokens":(True,False)}}
 def seed():
@@ -52,10 +65,19 @@ def ensure_wallet_request_columns():
             if name not in existing:
                 connection.execute(text("ALTER TABLE wallet_requests ADD COLUMN "+name+" "+ddl))
 
+def ensure_user_session_version_column():
+    inspector=inspect(engine)
+    if "users" not in inspector.get_table_names(): return
+    columns={c["name"] for c in inspector.get_columns("users")}
+    if "session_version" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE users ADD COLUMN session_version INT NOT NULL DEFAULT 0"))
+
 _fx_task=None
 @app.on_event("startup")
 async def startup():
     global _fx_task
+    ensure_user_session_version_column()
     seed()
     ensure_wallet_request_columns()
     _fx_task=asyncio.create_task(tgju_rate_worker())
@@ -79,6 +101,12 @@ def require_page(page,edit=False):
             raise HTTPException(403,"دسترسی کافی ندارید")
         return user
     return check
+def audit_event(db:Session,event_type:str,actor:User|None=None,target_user_id:int|None=None,request:Request|None=None,details:dict|None=None):
+    ip=request.headers.get("x-real-ip") if request else None
+    if not ip and request and request.client: ip=request.client.host
+    agent=request.headers.get("user-agent","")[:500] if request else ""
+    db.add(SecurityEventLog(event_type=event_type,actor_id=actor.id if actor else None,target_user_id=target_user_id,source_ip=(ip or "")[:64],user_agent=agent,details=json.dumps(details or {},ensure_ascii=False)[:4000]))
+
 class UserCreate(BaseModel):
     username:str=Field(min_length=3,max_length=80); password:str=Field(min_length=8,max_length=128)
     full_name:str=Field(min_length=2,max_length=160); role:str="user"
@@ -91,11 +119,28 @@ class CoinChange(BaseModel):
     user_id:int; amount:int; reason:str=Field(min_length=2,max_length=255); reference:str|None=None
 @app.get("/api/health")
 def health(): return {"status":"ok"}
+_DUMMY_PASSWORD_HASH=hash_password("not-a-real-user-password-for-timing-equalization")
 @app.post("/api/auth/login")
-def login(form:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
+def login(request:Request,response:Response,form:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
     u=db.query(User).filter_by(username=form.username).first()
-    if not u or not verify_password(form.password,u.password_hash) or not u.is_active: raise HTTPException(401,"نام کاربری یا رمز عبور اشتباه است")
-    return {"access_token":create_access_token(u.id),"token_type":"bearer"}
+    valid=verify_password(form.password,u.password_hash if u else _DUMMY_PASSWORD_HASH)
+    if not u or not valid or not u.is_active:
+        audit_event(db,"auth.login_failed",target_user_id=u.id if u else None,request=request,details={"username":form.username[:80]})
+        db.commit()
+        raise HTTPException(401,"نام کاربری یا رمز عبور اشتباه است")
+    token=create_access_token(u.id,u.session_version or 0)
+    response.set_cookie("hidary_session",token,max_age=settings.access_token_expire_minutes*60,httponly=True,secure=settings.cookie_secure,samesite="strict",path="/")
+    audit_event(db,"auth.login_success",actor=u,target_user_id=u.id,request=request)
+    db.commit()
+    return {"success":True,"token_type":"cookie"}
+
+@app.post("/api/auth/logout")
+def logout(response:Response,request:Request,user:User=Depends(current_user),db:Session=Depends(get_db)):
+    user.session_version=(user.session_version or 0)+1
+    audit_event(db,"auth.logout",actor=user,target_user_id=user.id,request=request)
+    db.commit()
+    response.delete_cookie("hidary_session",path="/",secure=settings.cookie_secure,httponly=True,samesite="strict")
+    return {"success":True}
 @app.get("/api/auth/me")
 def me(user:User=Depends(current_user),db:Session=Depends(get_db)):
     if user.role=="admin":
@@ -112,28 +157,45 @@ def dashboard(user:User=Depends(require_page("dashboard")),db:Session=Depends(ge
 def users(user:User=Depends(require_page("users")),db:Session=Depends(get_db)):
     return [{"id":u.id,"username":u.username,"full_name":u.full_name,"role":u.role,"is_active":u.is_active,"coin_balance":u.coin_balance} for u in db.query(User).order_by(User.id.desc()).all()]
 @app.post("/api/users",status_code=201)
-def create_user(data:UserCreate,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
+def create_user(data:UserCreate,request:Request,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
     if data.role not in DEFAULTS: raise HTTPException(400,"نقش نامعتبر است")
+    if data.role=="admin" and actor.role!="admin": raise HTTPException(403,"ایجاد مدیر کل فقط توسط مدیر کل مجاز است")
     if db.query(User).filter_by(username=data.username).first(): raise HTTPException(409,"نام کاربری تکراری است")
     u=User(username=data.username,full_name=data.full_name,role=data.role,password_hash=hash_password(data.password)); db.add(u); db.flush()
     role_defaults=DEFAULTS.get(data.role,DEFAULTS["user"])
     for key in PAGES:
         view,edit=role_defaults.get(key,(False,False))
         db.add(UserPagePermission(user_id=u.id,page_key=key,can_view=view,can_edit=edit))
+    audit_event(db,"user.created",actor=actor,target_user_id=u.id,request=request,details={"role":u.role})
     db.commit(); db.refresh(u)
     return {"id":u.id,"username":u.username}
 @app.patch("/api/users/{uid}")
-def update_user(uid:int,data:UserUpdate,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
+def update_user(uid:int,data:UserUpdate,request:Request,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
     u=db.get(User,uid)
     if not u: raise HTTPException(404,"کاربر پیدا نشد")
-    if u.id==actor.id and data.is_active is False: raise HTTPException(400,"نمی‌توانید حساب خود را غیرفعال کنید")
+    if u.role=="admin" and actor.role!="admin": raise HTTPException(403,"مدیر میانی اجازه تغییر حساب مدیر کل را ندارد")
     if data.role is not None:
         if data.role not in DEFAULTS: raise HTTPException(400,"نقش نامعتبر است")
+        if data.role=="admin" and actor.role!="admin": raise HTTPException(403,"ارتقای حساب به مدیر کل فقط توسط مدیر کل مجاز است")
+        if u.role=="admin" and data.role!="admin": raise HTTPException(403,"تغییر نقش مدیر کل از این مسیر مجاز نیست")
+    if u.id==actor.id and data.is_active is False: raise HTTPException(400,"نمی‌توانید حساب خود را غیرفعال کنید")
+    role_changed=data.role is not None and data.role!=u.role
+    revoke=role_changed or bool(data.password) or (data.is_active is not None and data.is_active!=u.is_active)
+    if role_changed:
         u.role=data.role
+        db.query(UserPagePermission).filter_by(user_id=u.id).delete(synchronize_session=False)
+        if u.role!="admin":
+            defaults=DEFAULTS.get(u.role,DEFAULTS["user"])
+            for key in PAGES:
+                view,edit=defaults.get(key,(False,False))
+                db.add(UserPagePermission(user_id=u.id,page_key=key,can_view=view,can_edit=edit))
     if data.full_name is not None: u.full_name=data.full_name
     if data.is_active is not None: u.is_active=data.is_active
     if data.password: u.password_hash=hash_password(data.password)
-    db.commit(); return {"success":True}
+    if revoke: u.session_version=(u.session_version or 0)+1
+    audit_event(db,"user.updated",actor=actor,target_user_id=u.id,request=request,details={"role":u.role,"role_changed":role_changed,"password_changed":bool(data.password),"active":u.is_active})
+    db.commit()
+    return {"success":True,"sessions_revoked":revoke}
 @app.get("/api/permissions")
 def permissions(user_id:int|None=None,actor:User=Depends(current_user),db:Session=Depends(get_db)):
     if actor.role!="admin": raise HTTPException(403,"فقط مدیر کل می‌تواند دسترسی کاربران را مدیریت کند")
@@ -145,7 +207,7 @@ def permissions(user_id:int|None=None,actor:User=Depends(current_user),db:Sessio
     return {"pages":PAGES,"users":[{"id":u.id,"username":u.username,"full_name":u.full_name,"role":u.role} for u in accounts],
             "selected_user_id":selected.id if selected else None,"permissions":permissions}
 @app.put("/api/permissions")
-def set_permission(data:PermissionUpdate,actor:User=Depends(current_user),db:Session=Depends(get_db)):
+def set_permission(data:PermissionUpdate,request:Request,actor:User=Depends(current_user),db:Session=Depends(get_db)):
     if actor.role!="admin": raise HTTPException(403,"فقط مدیر کل می‌تواند دسترسی کاربران را مدیریت کند")
     if data.page_key not in PAGES: raise HTTPException(400,"صفحه نامعتبر است")
     target=db.get(User,data.user_id)
@@ -154,14 +216,14 @@ def set_permission(data:PermissionUpdate,actor:User=Depends(current_user),db:Ses
     p=db.query(UserPagePermission).filter_by(user_id=target.id,page_key=data.page_key).first()
     if not p:
         p=UserPagePermission(user_id=target.id,page_key=data.page_key);db.add(p)
-    p.can_view=data.can_view;p.can_edit=data.can_edit;db.commit();return {"success":True}
+    p.can_view=data.can_view;p.can_edit=data.can_edit;audit_event(db,"permission.updated",actor=actor,target_user_id=target.id,request=request,details={"page":data.page_key,"view":data.can_view,"edit":data.can_edit});db.commit();return {"success":True}
 @app.get("/api/coins/transactions")
 def transactions(user_id:int|None=None,actor:User=Depends(require_page("coins")),db:Session=Depends(get_db)):
     q=db.query(CoinTransaction).order_by(CoinTransaction.id.desc())
     if user_id: q=q.filter(CoinTransaction.user_id==user_id)
     return [{"id":t.id,"user_id":t.user_id,"username":t.user.username,"amount":t.amount,"balance_after":t.balance_after,"reason":t.reason,"created_at":t.created_at.isoformat()} for t in q.limit(200).all()]
 @app.post("/api/coins/adjust")
-def adjust(data:CoinChange,actor:User=Depends(require_page("coins",True)),db:Session=Depends(get_db)):
+def adjust(data:CoinChange,request:Request,actor:User=Depends(require_page("coins",True)),db:Session=Depends(get_db)):
     if data.amount==0: raise HTTPException(400,"مقدار نمی‌تواند صفر باشد")
     try:
         u=db.query(User).filter(User.id==data.user_id).with_for_update().one_or_none()
@@ -170,6 +232,7 @@ def adjust(data:CoinChange,actor:User=Depends(require_page("coins",True)),db:Ses
         if balance<0: raise HTTPException(400,"موجودی کافی نیست")
         u.coin_balance=balance
         db.add(CoinTransaction(user_id=u.id,actor_id=actor.id,amount=data.amount,balance_after=balance,reason=data.reason,reference=data.reference))
+        audit_event(db,"wallet.coin_adjusted",actor=actor,target_user_id=u.id,request=request,details={"amount":data.amount,"balance_after":balance})
         db.commit(); return {"success":True,"balance":balance}
     except Exception: db.rollback(); raise
 
@@ -332,9 +395,23 @@ async def upload_wallet_proof(request_id:int,file:UploadFile=File(...),user:User
     if not row or (row.user_id!=user.id and user.role!="admin"): raise HTTPException(404,"درخواست پیدا نشد")
     if row.status not in ("awaiting_payment","pending"): raise HTTPException(400,"این درخواست در وضعیت قابل ارسال فیش نیست")
     if file.content_type not in ("image/jpeg","image/png","image/webp","application/pdf"): raise HTTPException(400,"فقط تصویر یا PDF مجاز است")
-    data=await file.read()
-    if len(data)>5*1024*1024: raise HTTPException(400,"حداکثر حجم فیش ۵ مگابایت است")
-    row.proof_filename=file.filename[:255];row.proof_content_type=file.content_type;row.proof_data=data;row.status="pending"
+    chunks=[]; total=0; limit=5*1024*1024
+    while True:
+        chunk=await file.read(65536)
+        if not chunk: break
+        total+=len(chunk)
+        if total>limit:
+            await file.close()
+            raise HTTPException(413,"حداکثر حجم فیش ۵ مگابایت است")
+        chunks.append(chunk)
+    data=b"".join(chunks)
+    signatures={"image/jpeg":lambda b:b.startswith(bytes.fromhex("ffd8ff")),
+        "image/png":lambda b:b.startswith(bytes.fromhex("89504e470d0a1a0a")),
+        "image/webp":lambda b:len(b)>=12 and b[:4]==b"RIFF" and b[8:12]==b"WEBP",
+        "application/pdf":lambda b:b.startswith(b"%PDF-")}
+    if not data or not signatures[file.content_type](data): raise HTTPException(400,"محتوای فایل با نوع اعلام‌شده مطابقت ندارد")
+    safe_name=re.sub(r"[^A-Za-z0-9._-]","_",file.filename or "proof")[:120] or "proof"
+    row.proof_filename=safe_name;row.proof_content_type=file.content_type;row.proof_data=data;row.status="pending"
     db.commit();return {"success":True,"status":"pending"}
 
 @app.get("/api/wallet/deposit-requests/{request_id}/proof")
@@ -342,7 +419,13 @@ def get_wallet_proof(request_id:int,user:User=Depends(current_user),db:Session=D
     from fastapi.responses import Response
     row=db.get(WalletRequest,request_id)
     if not row or not row.proof_data or (row.user_id!=user.id and user.role!="admin"): raise HTTPException(404,"فیش پیدا نشد")
-    return Response(content=row.proof_data,media_type=row.proof_content_type,headers={"Content-Disposition":'inline; filename="'+(row.proof_filename or "proof")+'"'})
+    safe_name=re.sub(r"[^A-Za-z0-9._-]","_",row.proof_filename or "proof")[:120] or "proof"
+    disposition="attachment" if row.proof_content_type=="application/pdf" else "inline"
+    return Response(content=row.proof_data,media_type=row.proof_content_type,headers={
+        "Content-Disposition":f'{disposition}; filename="{safe_name}"',
+        "X-Content-Type-Options":"nosniff",
+        "Content-Security-Policy":"sandbox"
+    })
 
 @app.post("/api/wallet/withdrawals",status_code=201)
 def create_withdrawal(data:WalletWithdrawInput,user:User=Depends(current_user),db:Session=Depends(get_db)):
@@ -367,8 +450,8 @@ def list_withdrawals(user:User=Depends(current_user),db:Session=Depends(get_db))
     return [{"id":x.id,"user_id":x.user_id,"username":x.user.username,"amount_irr":float(abs(x.amount_irr)),"status":x.transaction_type,"description":x.description,"created_at":x.created_at.isoformat()} for x in q.all()]
 
 @app.post("/api/wallet/deposit-requests/{request_id}/review")
-def review_wallet_request(request_id:int,data:WalletReviewInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
-    row=db.get(WalletRequest,request_id)
+def review_wallet_request(request_id:int,data:WalletReviewInput,request:Request,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
+    row=db.query(WalletRequest).filter(WalletRequest.id==request_id).with_for_update().one_or_none()
     if not row: raise HTTPException(404,"درخواست پیدا نشد")
     if row.status!="pending": raise HTTPException(400,"این درخواست قبلاً بررسی شده یا فیش ندارد")
     if data.action not in ("approve","reject"): raise HTTPException(400,"عملیات نامعتبر است")
@@ -378,11 +461,12 @@ def review_wallet_request(request_id:int,data:WalletReviewInput,actor:User=Depen
     if data.action=="approve":
         w=wallet_for(db,row.user_id);w.balance_irr=Decimal(w.balance_irr)+Decimal(row.amount_irr)
         db.add(WalletTransaction(user_id=row.user_id,actor_id=actor.id,transaction_type="deposit",amount_irr=row.amount_irr,balance_after_irr=w.balance_irr,description="تأیید افزایش موجودی #"+str(row.id),request_id=row.id))
+    audit_event(db,"wallet.deposit_reviewed",actor=actor,target_user_id=row.user_id,request=request,details={"request_id":row.id,"action":data.action})
     db.commit();return {"success":True,"status":row.status}
 
 @app.post("/api/wallet/withdrawals/{transaction_id}/review")
-def review_withdrawal(transaction_id:int,data:WalletReviewInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
-    row=db.get(WalletTransaction,transaction_id)
+def review_withdrawal(transaction_id:int,data:WalletReviewInput,request:Request,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
+    row=db.query(WalletTransaction).filter(WalletTransaction.id==transaction_id).with_for_update().one_or_none()
     if not row or row.transaction_type!="withdrawal_pending": raise HTTPException(404,"درخواست برداشت پیدا نشد")
     if data.action not in ("approve","reject"): raise HTTPException(400,"عملیات نامعتبر است")
     w=wallet_for(db,row.user_id)
@@ -393,6 +477,7 @@ def review_withdrawal(transaction_id:int,data:WalletReviewInput,actor:User=Depen
         row.transaction_type="withdrawal_approved";row.balance_after_irr=w.balance_irr
     else:
         row.transaction_type="withdrawal_rejected";row.description += " | رد: "+(data.reason or "")[:300]
+    audit_event(db,"wallet.withdrawal_reviewed",actor=actor,target_user_id=row.user_id,request=request,details={"transaction_id":row.id,"action":data.action})
     db.commit();return {"success":True}
 
 @app.get("/api/wallet/config")

@@ -280,7 +280,7 @@
     });
     id("walletConfigForm")?.addEventListener("submit",async e=>{
       e.preventDefault();const form=e.currentTarget,button=$('button[type="submit"]',form);busy(button,true,"در حال ذخیره...");
-      try{const payload=Object.fromEntries(new FormData(form));payload.fx_auto_enabled=payload.fx_auto_enabled==="true";await api.put("/api/wallet/config",payload);toast("تنظیمات نرخ و کارمزد ذخیره شد.");await loadWallet();}
+      try{const payload=Object.fromEntries(new FormData(form));payload.fx_auto_enabled=payload.fx_auto_enabled==="true";if(!payload.usd_irr_rate)payload.usd_irr_rate=walletConfig.usd_irr_rate||0;await api.put("/api/wallet/config",payload);toast("تنظیمات نرخ و کارمزد ذخیره شد.");await loadWallet();}
       catch(x){toast(x.message);}finally{busy(button,false);}
     });
     id("logoutBtn")?.addEventListener("click",()=>{try{localStorage.removeItem("hidary_token");}catch(_){}location.replace("/login/");});

@@ -11,8 +11,21 @@ from .database import Base,engine,SessionLocal,get_db
 from .models import User,PagePermission,UserPagePermission,CoinTransaction,SystemSetting,WalletAccount,WalletRequest,WalletTransaction,SecurityEventLog
 from .security import hash_password,verify_password,create_access_token,current_user
 from datetime import datetime
+from urllib.parse import urlsplit
+from fastapi.responses import JSONResponse
 app=FastAPI(title="Hidary Admin API",version="1.1.0",docs_url="/docs" if settings.api_docs_enabled else None,redoc_url="/redoc" if settings.api_docs_enabled else None,openapi_url="/openapi.json" if settings.api_docs_enabled else None)
 app.add_middleware(CORSMiddleware,allow_origins=settings.allowed_origins,allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
+
+@app.middleware("http")
+async def protect_cookie_mutations(request:Request,call_next):
+    if request.method in {"POST","PUT","PATCH","DELETE"} and request.cookies.get("hidary_session"):
+        origin=request.headers.get("origin","")
+        origin_host=urlsplit(origin).netloc.lower() if origin else ""
+        request_host=request.headers.get("host","").lower()
+        configured_hosts={urlsplit(value).netloc.lower() for value in settings.allowed_origins}
+        if not origin_host or (origin_host!=request_host and origin_host not in configured_hosts):
+            return JSONResponse(status_code=403,content={"detail":"درخواست از مبدأ مجاز نیست"})
+    return await call_next(request)
 PAGES={"dashboard":"داشبورد","products":"محصولات","addProduct":"افزودن محصول","sites":"سایت‌های پایش‌شده","aiTokens":"توکن هوش مصنوعی","settings":"تنظیمات","systemSettings":"تنظیمات کلی سیستم","reports":"گزارش‌ها","users":"کاربران","permissions":"دسترسی‌ها","coins":"مدیریت توکن"}
 DEFAULTS={"admin":{k:(True,True) for k in PAGES},"manager":{"dashboard":(True,False),"users":(True,True),"permissions":(False,False),"coins":(True,True),"reports":(True,False),"aiTokens":(True,False),"settings":(True,False)},"user":{"dashboard":(True,False),"aiTokens":(True,False)}}
 def seed():

@@ -188,3 +188,8 @@ body.login-page{
 }
 .login-v12-submit:hover{box-shadow:0 14px 30px rgba(8,119,189,.36)}
 .password-visibility:hover{background:#e3f7f8;color:#078b9b}
+
+
+/* Slightly larger login heading for clearer hierarchy */
+.login-v12-card h1{font-size:28px}
+@media(max-width:420px){.login-v12-card h1{font-size:24px}}

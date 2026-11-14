@@ -1,4 +1,4 @@
-/* Login-only styles. Shared reset, fonts and design tokens live in /assets/css/app.css. */
+/* Login-only styles */
 .login-page{min-height:100vh;display:grid;place-items:center;padding:26px;background:linear-gradient(135deg,#0f2e4d,#1d4e79 52%,#102b48);direction:rtl}
 .login-v12{position:relative;width:100%;min-height:calc(100vh - 52px);display:flex;flex-direction:column;align-items:center;justify-content:center}
 .login-v12-overlay{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(circle at 20% 20%,rgba(119,164,204,.22),transparent 38%),radial-gradient(circle at 85% 85%,rgba(4,21,40,.35),transparent 42%)}
@@ -26,3 +26,21 @@
 .login-v12-submit{font-size:14px}
 .login-v12-form .form-error{font-size:12px}
 .login-v12-footer{font-size:12px}
+@media(max-width:1150px){.sidebar{width:230px}.main-content{margin-right:230px;padding:22px}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wallet-request-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:820px){.sidebar{position:relative;inset:auto;width:auto;max-height:none;padding:15px}.sidebar-brand{min-height:60px;padding-bottom:12px}.sidebar-logo{width:44px;height:44px;flex-basis:44px}.dashboard-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:13px}.dashboard-nav>a{min-height:42px;padding:7px;font-size:11px}.settings-subnav{grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));margin:0;padding:7px;border:0}.settings-subnav a{font-size:10px}.main-content{margin:0;padding:18px}.topbar{flex-wrap:wrap}.topbar-search{order:3;width:100%;max-width:none}.topbar-actions{margin-right:auto}}
+@media(max-width:600px){.main-content{padding:14px}.topbar{gap:10px}.topbar h1{font-size:19px}.topbar-actions{gap:5px}.profile-details{display:none}.welcome,.panel-heading,.report-toolbar{align-items:flex-start;flex-direction:column}.welcome-actions,.report-tools{width:100%;justify-content:space-between}.stats-grid,.report-stats,.wallet-summary,.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.stat-card{min-height:100px;padding:12px;gap:9px}.stat-icon{width:34px;height:34px;flex-basis:34px}.stat-copy>strong{font-size:19px}.stat-copy>span,.stat-copy>small{font-size:10px}.form-grid,.wallet-request-form{grid-template-columns:1fr}.permission-row{grid-template-columns:1fr 85px 85px;font-size:11px}.withdrawal-request-list{grid-template-columns:1fr}.report-tools input{width:100%}.report-tools{flex-wrap:wrap}.dashboard-section-heading{align-items:flex-start;flex-direction:column}.trend-product-nav{width:100%;justify-content:space-between}.trend-product-nav select{flex:1;max-width:220px}.login-page{padding:16px}.login-v12{min-height:calc(100vh - 32px)}.login-v12-card{padding:30px 22px 25px}.login-v12-card h1{font-size:20px}}
+@media(max-width:390px){.dashboard-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}.stats-grid,.report-stats,.wallet-summary,.settings-grid{grid-template-columns:1fr}.topbar-actions{margin-right:0}.profile-menu{left:auto;right:0}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+@media(max-width:820px){
+  .sidebar-brand-copy{text-align:left}
+  .dashboard-nav>a{font-size:12px}
+  .settings-subnav a{font-size:11px}
+}
+@media(max-width:600px){
+  .topbar h1{font-size:22px}
+  .welcome h2{font-size:19px}
+  .welcome p,.panel p,.panel-heading p{font-size:12px}
+  .stat-copy>strong{font-size:21px}
+  th,td{font-size:12px}
+  .form-grid input,.form-grid select,.form-grid textarea{font-size:13px}
+}

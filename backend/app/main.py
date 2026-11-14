@@ -17,8 +17,21 @@ DEFAULTS={"admin":{k:(True,True) for k in PAGES},"manager":{"dashboard":(True,Fa
 def seed():
     Base.metadata.create_all(bind=engine); db=SessionLocal()
     try:
-        if not db.query(User).filter_by(username=settings.admin_username).first():
-            db.add(User(username=settings.admin_username,full_name=settings.admin_full_name,password_hash=hash_password(settings.admin_password),role="admin"))
+        # Environment credentials are the source of truth for the bootstrap admin.
+        # Keep an existing admin account in sync so changing ADMIN_PASSWORD in .env
+        # does not leave the database with an obsolete password hash.
+        admin=db.query(User).filter_by(username=settings.admin_username).first()
+        if not admin:
+            admin=User(username=settings.admin_username,full_name=settings.admin_full_name,
+                       password_hash=hash_password(settings.admin_password),role="admin")
+            db.add(admin)
+        else:
+            if admin.full_name != settings.admin_full_name:
+                admin.full_name=settings.admin_full_name
+            if admin.role != "admin":
+                admin.role="admin"
+            if not verify_password(settings.admin_password,admin.password_hash):
+                admin.password_hash=hash_password(settings.admin_password)
         for role,pages in DEFAULTS.items():
             for key,(view,edit) in pages.items():
                 p=db.query(PagePermission).filter_by(role=role,page_key=key).first()

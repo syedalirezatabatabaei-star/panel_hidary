@@ -15,21 +15,13 @@
   }
 
   if (toggleButton && passwordInput) {
+    // One source of truth for the visual state: button class + input type.
     toggleButton.addEventListener("click", function () {
-      const visible = passwordInput.type === "password";
-      passwordInput.type = visible ? "text" : "password";
-      toggleButton.setAttribute("aria-label", visible ? "پنهان کردن رمز عبور" : "نمایش رمز عبور");
-      toggleButton.setAttribute("aria-pressed", String(visible));
-      const openIcon = toggleButton.querySelector(".eye-open");
-      const closedIcon = toggleButton.querySelector(".eye-closed");
-      if (openIcon) {
-        openIcon.hidden = visible;
-        openIcon.setAttribute("aria-hidden", String(visible));
-      }
-      if (closedIcon) {
-        closedIcon.hidden = !visible;
-        closedIcon.setAttribute("aria-hidden", String(!visible));
-      }
+      const shouldShow = passwordInput.type === "password";
+      passwordInput.type = shouldShow ? "text" : "password";
+      toggleButton.classList.toggle("is-visible", shouldShow);
+      toggleButton.setAttribute("aria-label", shouldShow ? "پنهان کردن رمز عبور" : "نمایش رمز عبور");
+      toggleButton.setAttribute("aria-pressed", String(shouldShow));
     });
   }
 
@@ -79,7 +71,7 @@
     window.api.get("/api/auth/me").then(function () {
       window.location.replace("/dashboard/");
     }).catch(function () {
-      // توکن نامعتبر پاک می‌شود؛ کاربر می‌تواند دوباره وارد شود.
+      try { localStorage.removeItem("hidary_token"); } catch (_) {}
     });
   }
 })();

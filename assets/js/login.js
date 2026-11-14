@@ -55,7 +55,7 @@
       }
 
       localStorage.setItem("hidary_token", result.access_token);
-      window.location.assign("../dashbord/");
+      window.location.assign("/dashboard/");
     } catch (error) {
       showError(error && error.message ? error.message : "ورود ناموفق بود.");
       if (submitButton) {
@@ -71,7 +71,7 @@
 
   if (existingToken) {
     window.api.get("/api/auth/me").then(function () {
-      window.location.replace("../dashbord/");
+      window.location.replace("/dashboard/");
     }).catch(function () {
       // توکن نامعتبر پاک می‌شود؛ کاربر می‌تواند دوباره وارد شود.
     });

@@ -106,11 +106,25 @@ class CoinChange(BaseModel):
     user_id:int; amount:int; reason:str=Field(min_length=2,max_length=255); reference:str|None=None
 @app.get("/api/health")
 def health(): return {"status":"ok"}
+_DUMMY_PASSWORD_HASH=hash_password("not-a-real-user-password-for-timing-equalization")
 @app.post("/api/auth/login")
-def login(form:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
+def login(request:Request,response:Response,form:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
     u=db.query(User).filter_by(username=form.username).first()
-    if not u or not verify_password(form.password,u.password_hash) or not u.is_active: raise HTTPException(401,"نام کاربری یا رمز عبور اشتباه است")
-    return {"access_token":create_access_token(u.id),"token_type":"bearer"}
+    valid=verify_password(form.password,u.password_hash if u else _DUMMY_PASSWORD_HASH)
+    if not u or not valid or not u.is_active:
+        audit_event(db,"auth.login_failed",target_user_id=u.id if u else None,request=request,details={"username":form.username[:80]})
+        db.commit()
+        raise HTTPException(401,"نام کاربری یا رمز عبور اشتباه است")
+    token=create_access_token(u.id,u.session_version or 0)
+    response.set_cookie("hidary_session",token,max_age=settings.access_token_expire_minutes*60,httponly=True,secure=settings.cookie_secure,samesite="strict",path="/")
+    audit_event(db,"auth.login_success",actor=u,target_user_id=u.id,request=request)
+    db.commit()
+    return {"success":True,"token_type":"cookie"}
+
+@app.post("/api/auth/logout")
+def logout(response:Response):
+    response.delete_cookie("hidary_session",path="/",secure=settings.cookie_secure,httponly=True,samesite="strict")
+    return {"success":True}
 @app.get("/api/auth/me")
 def me(user:User=Depends(current_user),db:Session=Depends(get_db)):
     if user.role=="admin":

@@ -1,118 +1,270 @@
-let me=null;const labels={dashboard:"داشبورد",products:"لیست محصولات",addProduct:"افزودن محصول جدید",aiTokens:"توکن هوش مصنوعی",settings:"تنظیمات",systemSettings:"تنظیمات کلی سیستم",reports:"گزارش‌ها",sites:"سایت‌های پایش‌شده",users:"کاربران",permissions:"نقش‌ها و دسترسی‌ها",coins:"مدیریت توکن"};function allowed(k){return me?.role==="admin"||!!me?.permissions?.[k]?.view}function canEdit(k){return me?.role==="admin"||!!me?.permissions?.[k]?.edit}function role(r){return ({admin:"مدیر کل",manager:"مدیر",user:"کاربر"})[r]||r}function page(k){if(!document.getElementById(k+"Page"))k="dashboard";if(k!=="dashboard"&&!allowed(k)){toast("دسترسی ندارید");return}document.querySelectorAll(".page-section").forEach(x=>x.classList.add("hidden"));document.getElementById(k+"Page").classList.remove("hidden");document.getElementById("pageTitle").textContent=labels[k];document.querySelectorAll("#sideNav a").forEach(a=>a.classList.toggle("active",a.dataset.page===k));if(location.hash!=="#"+k)history.replaceState(null,"","#"+k);const loaders={dashboard,users,permissions,coins,reports,settings,systemSettings,aiTokens};if(loaders[k])loaders[k]()}async function dashboard(){
- const status=document.getElementById("dashboardStatus");
- const updatedAt=document.getElementById("lastUpdated");
- if(status)status.textContent="در حال دریافت اطلاعات...";
- try{
-  const d=await api.get("/api/dashboard");
-  usersTotal.textContent=num(d.users_total);
-  coinsTotal.textContent=num(d.coins_total);
-  coinsUsed.textContent=num(d.coins_used);
-  if(document.getElementById("productCount"))document.getElementById("productCount").textContent="API ندارد";
-  if(document.getElementById("sitesTotal"))document.getElementById("sitesTotal").textContent="API ندارد";
-  const rows=Array.isArray(d.recent_transactions)?d.recent_transactions:[];
-  recentTransactions.innerHTML=rows.length?rows.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+esc(t.reason)+"</td><td>"+(t.created_at?new Date(t.created_at).toLocaleDateString("fa-IR"):"—")+"</td></tr>").join(""):'<tr><td colspan="4" class="report-empty">هنوز تراکنشی ثبت نشده است.</td></tr>';
-  if(updatedAt)updatedAt.textContent=new Date().toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"});
-  if(status)status.textContent="اطلاعات با موفقیت به‌روزرسانی شد";
- }catch(e){
-  if(status)status.textContent="دریافت اطلاعات ناموفق بود";
-  recentTransactions.innerHTML='<tr><td colspan="4" class="report-empty">اطلاعات داشبورد دریافت نشد. '+esc(e.message)+'</td></tr>';
-  toast(e.message);
- }
-}
-document.getElementById("refreshDashboard")?.addEventListener("click",dashboard);
-const menuSearch=document.getElementById("menuSearch");
-const navLinks=[...document.querySelectorAll("#sideNav a[data-page]")];
-const settingsToggle=document.querySelector('#sideNav a[data-page="settings"]');
-const settingsSubnav=document.getElementById("settingsSubnav");
-function toggleSettingsSubnav(force){
- const open=typeof force==="boolean"?force:settingsSubnav.classList.contains("hidden");
- settingsSubnav.classList.toggle("hidden",!open);
- settingsToggle?.setAttribute("aria-expanded",String(open));
- settingsToggle?.classList.toggle("submenu-open",open);
-}
-if(location.hash==="#settings")toggleSettingsSubnav(true);
-function filterMenuItems(value){
- const q=value.trim().toLocaleLowerCase("fa");
- navLinks.forEach(a=>a.classList.toggle("search-hidden",!!q&&!a.textContent.toLocaleLowerCase("fa").includes(q)));
-}
-menuSearch?.addEventListener("input",e=>filterMenuItems(e.target.value));
-menuSearch?.addEventListener("keydown",e=>{
- if(e.key==="Enter"){
-  const first=navLinks.find(a=>!a.classList.contains("search-hidden")&&!a.classList.contains("hidden"));
-  if(first){page(first.dataset.page);menuSearch.value="";filterMenuItems("");menuSearch.blur()}
- }
- if(e.key==="Escape"){menuSearch.value="";filterMenuItems("");menuSearch.blur()}
-});
-document.querySelectorAll('[data-page="sites"]').forEach(link=>link.addEventListener("click",e=>{e.preventDefault();page("sites")}));
-document.getElementById("trendProductNav")?.addEventListener("change",e=>{if(e.target.value==="all")page("products")});
-document.getElementById("productKpiTile")?.addEventListener("click",e=>{
- e.preventDefault();page("products");
-});
-let reportRows=[];
-function renderReportRows(query=""){
- const body=document.getElementById("reportTransactions");
- const q=query.trim().toLocaleLowerCase("fa");
- const filtered=reportRows.filter(t=>[t.username,t.reason,t.amount,t.balance_after].some(v=>String(v??"").toLocaleLowerCase("fa").includes(q)));
- body.innerHTML=filtered.length?filtered.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+num(t.balance_after)+"</td><td>"+esc(t.reason)+"</td><td>"+(t.created_at?new Date(t.created_at).toLocaleString("fa-IR"):"—")+"</td></tr>").join(""):'<tr><td colspan="5" class="report-empty">'+(reportRows.length?"موردی با این عبارت پیدا نشد.":"هنوز تراکنشی ثبت نشده است.")+'</td></tr>';
-}
-async function reports(){
- const body=document.getElementById("reportTransactions");
- const status=document.getElementById("reportStatus");
- if(!allowed("coins")){toast("برای مشاهده گزارش‌ها دسترسی مدیریت توکن لازم است");return}
- status.textContent="در حال دریافت...";
- try{
-  const rows=await api.get("/api/coins/transactions");
-  reportRows=Array.isArray(rows)?rows:[];
-  document.getElementById("reportCount").textContent=num(reportRows.length);
-  const positive=reportRows.filter(x=>Number(x.amount)>0).reduce((s,x)=>s+Number(x.amount),0);
-  const negative=reportRows.filter(x=>Number(x.amount)<0).reduce((s,x)=>s+Number(x.amount),0);
-  document.getElementById("reportPositive").textContent=num(positive);
-  document.getElementById("reportNegative").textContent=num(Math.abs(negative));
-  const latest=reportRows[0]?.created_at;
-  document.getElementById("reportLatest").textContent=latest?new Date(latest).toLocaleDateString("fa-IR"):"—";
-  renderReportRows(document.getElementById("reportSearch")?.value||"");
-  status.textContent=reportRows.length+" رکورد دریافت شد";
- }catch(e){
-  status.textContent="دریافت اطلاعات ناموفق بود";
-  body.innerHTML='<tr><td colspan="5" class="report-empty">گزارش از سرور دریافت نشد: '+esc(e.message)+'</td></tr>';
-  toast(e.message);
- }
-}
-document.getElementById("reportSearch")?.addEventListener("input",e=>renderReportRows(e.target.value));
-document.getElementById("exportTransactions")?.addEventListener("click",()=>{
- if(!reportRows.length){toast("داده‌ای برای خروجی وجود ندارد");return}
- const quote=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
- const rows=[["کاربر","مقدار تغییر","موجودی پس از تراکنش","شرح","تاریخ"],...reportRows.map(t=>[t.username,t.amount,t.balance_after,t.reason,new Date(t.created_at).toLocaleString("fa-IR")])];
- const csv="\uFEFF"+rows.map(r=>r.map(quote).join(",")).join("\r\n");
- const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
- const url=URL.createObjectURL(blob),a=document.createElement("a");
- a.href=url;a.download="hidary-transactions.csv";a.click();URL.revokeObjectURL(url);
-});
-async function users(){try{const a=await api.get("/api/users");addUserBtn.classList.toggle("hidden",!canEdit("users"));usersTable.innerHTML=a.map(u=>"<tr><td>"+esc(u.full_name)+"</td><td>"+esc(u.username)+"</td><td>"+role(u.role)+"</td><td>"+(u.is_active?"فعال":"غیرفعال")+"</td><td>"+num(u.coin_balance)+"</td></tr>").join("");coinUser.innerHTML='<option value="">انتخاب کاربر</option>'+a.map(u=>'<option value="'+u.id+'">'+esc(u.full_name)+" ("+esc(u.username)+")</option>").join("")}catch(e){toast(e.message)}}async function permissions(){try{const d=await api.get("/api/permissions");permissionsContent.innerHTML=Object.entries(d.roles).filter(x=>x[0]!=="admin").map(([r,ps])=>'<div class="role-block"><h4>'+role(r)+'</h4>'+ps.map(p=>'<div class="permission-row"><span>'+p.page_title+'</span><label><input type="checkbox" data-role="'+r+'" data-page="'+p.page_key+'" data-kind="view" '+(p.can_view?"checked":"")+'> مشاهده</label><label><input type="checkbox" data-role="'+r+'" data-page="'+p.page_key+'" data-kind="edit" '+(p.can_edit?"checked":"")+'> ویرایش</label></div>').join("")+"</div>").join("");permissionsContent.querySelectorAll("input").forEach(i=>{i.disabled=!canEdit("permissions");i.onchange=async()=>{const row=i.closest(".role-block"),v=row.querySelector('[data-kind="view"][data-page="'+i.dataset.page+'"]'),e=row.querySelector('[data-kind="edit"][data-page="'+i.dataset.page+'"]');if(e.checked)v.checked=true;try{await api.put("/api/permissions",{role:i.dataset.role,page_key:i.dataset.page,can_view:v.checked,can_edit:e.checked});toast("دسترسی ذخیره شد")}catch(x){toast(x.message);permissions()}}});}catch(e){toast(e.message)}}async function coins(){try{coinForm.classList.toggle("hidden",!canEdit("coins"));const a=await api.get("/api/coins/transactions");coinsTable.innerHTML=a.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+num(t.balance_after)+"</td><td>"+esc(t.reason)+"</td><td>"+new Date(t.created_at).toLocaleString("fa-IR")+"</td></tr>").join("")}catch(e){toast(e.message)}}
-async function settings(){document.querySelectorAll("[data-settings-target]").forEach(b=>{const target=b.dataset.settingsTarget;b.classList.toggle("hidden",!allowed(target));b.onclick=()=>page(target)})}
-async function systemSettings(){try{const d=await api.get("/api/system/config"),f=document.getElementById("systemConfigForm");Object.keys(d).forEach(k=>{if(f.elements[k])f.elements[k].value=d[k]})}catch(e){toast(e.message)}}
-document.getElementById("systemConfigForm")?.addEventListener("submit",async e=>{e.preventDefault();try{await api.put("/api/system/config",Object.fromEntries(new FormData(e.currentTarget)));toast("تنظیمات ذخیره شد")}catch(x){toast(x.message)}});
-let activeDepositRequest=null,activeDepositData=null,walletConfig=null;
-function formatMoney(v,c="IRR"){return Number(v||0).toLocaleString("en-US",{maximumFractionDigits:2})+(c==="USD"?" $":" ریال")}
-function updateDepositConversion(){const a=Number(document.getElementById("depositAmount").value||0),c=document.getElementById("depositCurrency").value,r=Number(walletConfig?.usd_irr_rate||0),v=c==="IRR"?(r>0?a/r:0):a*r;document.getElementById("depositConverted").value=a?(r>0?formatMoney(v,c==="IRR"?"USD":"IRR"):"نرخ تبدیل توسط مدیر تنظیم نشده"):"";if(a>0&&walletConfig?.card_number){showBankCard();document.getElementById("paymentDoneBtn").classList.remove("hidden");document.getElementById("paymentDoneBtn").disabled=!activeDepositRequest}else if(!activeDepositRequest){document.getElementById("bankPaymentPanel").classList.add("hidden")}}
-function showBankCard(){if(!walletConfig||!walletConfig.card_number)return;document.getElementById("paymentBankName").textContent=walletConfig.bank_name||"بانک";document.getElementById("paymentCardNumber").textContent=walletConfig.card_number;document.getElementById("paymentCardHolder").textContent=walletConfig.card_holder||"صاحب کارت";document.getElementById("paymentIban").textContent=walletConfig.iban?"شبا: "+walletConfig.iban:"";document.getElementById("paymentBankDescription").textContent=walletConfig.bank_description||"پس از کارت‌به‌کارت، فیش پرداخت را ارسال کنید.";const a=Number(document.getElementById("depositAmount").value||0),c=document.getElementById("depositCurrency").value,r=Number(walletConfig.usd_irr_rate||0);const due=activeDepositData?activeDepositData.amount_irr:(c==="USD"?a*r:a);document.getElementById("paymentAmountDue").textContent="مبلغ قابل پرداخت به کارت: "+formatMoney(due,"IRR");document.getElementById("bankPaymentPanel").classList.remove("hidden")}
-function walletStatus(s){return ({awaiting_payment:"در انتظار پرداخت",pending:"در انتظار تأیید",approved:"تأیید شد",rejected:"رد شد",withdrawal_pending:"در انتظار بررسی",withdrawal_approved:"برداشت تأیید شد",withdrawal_rejected:"برداشت رد شد"})[s]||s}
-async function loadWalletTables(){
- const admin=me?.role==="admin",requests=await api.get("/api/wallet/requests"),withdrawals=admin?await api.get("/api/wallet/withdrawals"):[];
- const reviewPanel=document.getElementById("withdrawalReviewPanel");
- if(reviewPanel){reviewPanel.classList.toggle("hidden",!admin);document.getElementById("withdrawalRequestsList").innerHTML=withdrawals.length?withdrawals.map(x=>'<article class="withdrawal-request-card"><div><b>'+esc(x.username)+'</b><small>'+new Date(x.created_at).toLocaleString("fa-IR")+'</small></div><strong>'+formatMoney(x.amount_irr)+'</strong><p>'+esc(x.description)+'</p><span>'+walletStatus(x.status)+'</span>'+(x.status==="withdrawal_pending"?'<div class="withdrawal-request-actions"><button class="btn btn-primary withdrawal-approve" data-id="'+x.id+'">تأیید برداشت</button><button class="btn btn-soft withdrawal-reject" data-id="'+x.id+'">رد درخواست</button></div>':"")+'</article>').join(""):'<p class="report-empty">درخواست برداشتی برای بررسی وجود ندارد.</p>'}
- document.getElementById("depositRequestsTable").innerHTML=requests.length?requests.map(x=>'<tr><td>'+esc(x.full_name||x.username)+'</td><td>'+formatMoney(x.entered_amount,x.currency)+'</td><td>'+walletStatus(x.status)+'</td><td>'+(x.proof_filename?'<button class="btn btn-soft proof-view" data-id="'+x.id+'">مشاهده فیش</button>':"—")+'</td><td>'+new Date(x.created_at).toLocaleDateString("fa-IR")+'</td><td>'+(admin&&x.status==="pending"?'<button class="btn btn-primary deposit-approve" data-id="'+x.id+'">تأیید</button> <button class="btn btn-soft deposit-reject" data-id="'+x.id+'">رد</button>':(x.status==="awaiting_payment"&&x.user_id===me.id?'<button class="btn btn-soft continue-deposit" data-id="'+x.id+'">ادامه پرداخت</button>':"—"))+'</td></tr>').join(""):'<tr><td colspan="6">درخواستی ثبت نشده است.</td></tr>';
- document.querySelectorAll(".continue-deposit").forEach(b=>b.onclick=()=>{const x=requests.find(r=>String(r.id)===b.dataset.id);if(!x)return;activeDepositRequest=x.id;activeDepositData={currency:x.currency,entered_amount:x.entered_amount,amount_irr:x.amount_irr,amount_usd:x.amount_usd};document.getElementById("depositAmount").value=x.entered_amount;document.getElementById("depositCurrency").value=x.currency;document.getElementById("depositAmount").disabled=true;document.getElementById("depositCurrency").disabled=true;showBankCard();document.getElementById("paymentDoneBtn").classList.remove("hidden");document.getElementById("paymentDoneBtn").disabled=false;document.getElementById("proofUploadForm").classList.add("hidden")});
-document.querySelectorAll(".deposit-approve").forEach(b=>b.onclick=()=>reviewDeposit(b.dataset.id,"approve"));document.querySelectorAll(".deposit-reject").forEach(b=>b.onclick=()=>reviewDeposit(b.dataset.id,"reject"));document.querySelectorAll(".withdrawal-approve").forEach(b=>b.onclick=()=>reviewWithdrawal(b.dataset.id,"approve"));document.querySelectorAll(".withdrawal-reject").forEach(b=>b.onclick=()=>reviewWithdrawal(b.dataset.id,"reject"));document.querySelectorAll(".proof-view").forEach(b=>b.onclick=async()=>{try{const popup=window.open("about:blank","_blank");if(!popup)throw new Error("مرورگر بازشدن پنجره جدید را مسدود کرد");const response=await fetch(API_BASE+"/api/wallet/deposit-requests/"+b.dataset.id+"/proof",{headers:{Authorization:"Bearer "+localStorage.getItem("hidary_token")}});if(!response.ok){popup.close();throw new Error("دریافت فیش ناموفق بود")}const blob=await response.blob();const url=URL.createObjectURL(blob);popup.location.href=url;setTimeout(()=>URL.revokeObjectURL(url),60000)}catch(e){toast(e.message)}});
-}
-async function reviewDeposit(id,action){let reason="";if(action==="reject"){reason=prompt("علت رد درخواست را وارد کنید:")||"";if(!reason)return}try{await api.post("/api/wallet/deposit-requests/"+id+"/review",{action,reason});toast("وضعیت درخواست ثبت شد");await loadWalletTables();await aiTokens()}catch(e){toast(e.message)}}
-async function reviewWithdrawal(id,action){let reason="";if(action==="reject"){reason=prompt("علت رد برداشت را وارد کنید:")||"";if(!reason)return}try{await api.post("/api/wallet/withdrawals/"+id+"/review",{action,reason});toast("وضعیت برداشت ثبت شد");await loadWalletTables();await aiTokens()}catch(e){toast(e.message)}}
-async function aiTokens(){try{const [w,c]=await Promise.all([api.get("/api/wallet"),api.get("/api/wallet/config")]);walletConfig=c;document.getElementById("walletBalanceIrr").textContent=formatMoney(w.balance_irr);document.getElementById("walletBalanceUsd").textContent=Number(w.usd_irr_rate)>0?formatMoney(w.balance_usd,"USD"):"نرخ تبدیل تنظیم نشده";document.getElementById("walletConfigPanel").classList.toggle("hidden",me?.role!=="admin");const f=document.getElementById("walletConfigForm");Object.keys(c).forEach(k=>{if(f.elements[k])f.elements[k].value=c[k]});updateDepositConversion();await loadWalletTables()}catch(e){toast(e.message)}}
-document.getElementById("depositAmount")?.addEventListener("input",updateDepositConversion);document.getElementById("depositCurrency")?.addEventListener("change",updateDepositConversion);
-document.getElementById("depositRequestForm")?.addEventListener("submit",async e=>{e.preventDefault();const submit=e.currentTarget.querySelector('button[type="submit"]');if(submit.disabled)return;const amount=Number(document.getElementById("depositAmount").value),currency=document.getElementById("depositCurrency").value;if(!amount||amount<=0){toast("مبلغ معتبر وارد کنید");return}try{submit.disabled=true;const d=await api.post("/api/wallet/deposit-requests",{amount,currency});activeDepositRequest=d.id;activeDepositData={...d,currency,entered_amount:amount};document.getElementById("paymentDoneBtn").classList.remove("hidden");document.getElementById("depositAmount").disabled=true;document.getElementById("depositCurrency").disabled=true;showBankCard();document.getElementById("paymentDoneBtn").disabled=false;document.getElementById("proofUploadForm").classList.add("hidden");document.getElementById("paymentDoneBtn").classList.remove("hidden");toast("درخواست ثبت شد؛ پس از پرداخت فیش را ارسال کنید");await loadWalletTables()}catch(x){if(!activeDepositRequest)submit.disabled=false;toast(x.message)}});
-document.getElementById("paymentDoneBtn")?.addEventListener("click",()=>{if(!activeDepositRequest){toast("ابتدا درخواست افزایش موجودی ثبت کنید");return}document.getElementById("proofUploadForm").classList.remove("hidden");document.getElementById("paymentProofFile").focus()});
-document.getElementById("proofUploadForm")?.addEventListener("submit",async e=>{e.preventDefault();const file=document.getElementById("paymentProofFile").files[0],submit=e.currentTarget.querySelector('button[type="submit"]');if(!file||!activeDepositRequest||submit.disabled)return;const fd=new FormData();fd.append("file",file);try{submit.disabled=true;await api.request("/api/wallet/deposit-requests/"+activeDepositRequest+"/proof",{method:"POST",body:fd});toast("فیش ارسال شد و برای تأیید مدیر در صف قرار گرفت");e.currentTarget.reset();e.currentTarget.classList.add("hidden");document.getElementById("paymentDoneBtn").classList.add("hidden");document.getElementById("bankPaymentPanel").classList.add("hidden");activeDepositRequest=null;activeDepositData=null;document.getElementById("depositAmount").disabled=false;document.getElementById("depositCurrency").disabled=false;document.querySelector("#depositRequestForm button[type=submit]").disabled=false;await loadWalletTables()}catch(x){submit.disabled=false;toast(x.message)}});
-document.getElementById("withdrawalForm")?.addEventListener("submit",async e=>{e.preventDefault();const submit=e.currentTarget.querySelector('button[type="submit"]');if(submit.disabled)return;try{submit.disabled=true;await api.post("/api/wallet/withdrawals",{amount_irr:Number(document.getElementById("withdrawalAmount").value),destination:document.getElementById("withdrawalDestination").value});toast("درخواست برداشت ثبت شد");e.currentTarget.reset()}catch(x){toast(x.message)}finally{submit.disabled=false}});
-document.getElementById("walletConfigForm")?.addEventListener("submit",async e=>{e.preventDefault();try{await api.put("/api/wallet/config",Object.fromEntries(new FormData(e.currentTarget)));toast("اطلاعات کارت و نرخ تبدیل ذخیره شد");await aiTokens()}catch(x){toast(x.message)}});
-
-sideNav.onclick=e=>{const a=e.target.closest("a[data-page]");if(!a)return;e.preventDefault();if(a.dataset.page==="settings"){toggleSettingsSubnav(settingsSubnav.classList.contains("hidden"));page("settings");return}if(["users","permissions","systemSettings"].includes(a.dataset.page))toggleSettingsSubnav(true);page(a.dataset.page)};logoutBtn.onclick=()=>{localStorage.removeItem("hidary_token");location.href="../login/"};const userMenu=document.getElementById("userMenu"),userMenuBtn=document.getElementById("userMenuBtn"),themeToggle=document.getElementById("themeToggle");function closeUserMenu(){userMenu.classList.add("hidden");userMenuBtn.setAttribute("aria-expanded","false")}userMenuBtn.onclick=()=>{const open=userMenu.classList.toggle("hidden")===false;userMenuBtn.setAttribute("aria-expanded",String(open))};document.addEventListener("click",e=>{if(!e.target.closest(".profile-menu-wrap"))closeUserMenu()});document.addEventListener("keydown",e=>{if(e.key==="Escape")closeUserMenu()});userSettingsLink.onclick=e=>{e.preventDefault();closeUserMenu();page("settings")};function setTheme(dark){document.body.classList.toggle("theme-dark",dark);themeToggle.setAttribute("aria-pressed",String(dark));themeToggle.setAttribute("aria-label",dark?"فعال‌سازی حالت روشن":"فعال‌سازی حالت تیره");themeToggle.title=dark?"حالت روشن":"حالت تیره";localStorage.setItem("hidary_theme",dark?"dark":"light")}setTheme(localStorage.getItem("hidary_theme")==="dark");themeToggle.onclick=()=>setTheme(!document.body.classList.contains("theme-dark"));addUserBtn.onclick=()=>userForm.classList.toggle("hidden");userForm.onsubmit=async e=>{e.preventDefault();try{await api.post("/api/users",Object.fromEntries(new FormData(e.currentTarget)));e.currentTarget.reset();e.currentTarget.classList.add("hidden");toast("کاربر ایجاد شد");users()}catch(x){toast(x.message)}};coinForm.onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await api.post("/api/coins/adjust",{user_id:Number(f.get("user_id")),amount:Number(f.get("amount")),reason:f.get("reason")});e.currentTarget.reset();toast("تراکنش ثبت شد");coins();users()}catch(x){toast(x.message)}};(async()=>{try{me=await api.get("/api/auth/me");userName.textContent=me.full_name||me.username;userRole.textContent=role(me.role);menuUserName.textContent=me.full_name||me.username;menuUserRole.textContent=role(me.role);todayLabel.textContent=new Date().toLocaleDateString("fa-IR");document.querySelectorAll("#sideNav a").forEach(a=>{const key=a.dataset.page;if(key!=="dashboard"&&!allowed(key))a.classList.add("hidden")});const initial=location.hash.slice(1);page(labels[initial]?initial:"dashboard")}catch(e){toast(e.message)}})()
+"use strict";
+(function () {
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const id = (s) => document.getElementById(s);
+  let me = null, reportRows = [], walletConfig = null, activeDepositRequest = null, activeDepositData = null;
+  const labels = {dashboard:"داشبورد",products:"لیست محصولات",addProduct:"افزودن محصول جدید",aiTokens:"توکن هوش مصنوعی",settings:"تنظیمات",systemSettings:"تنظیمات کلی سیستم",reports:"گزارش‌ها",sites:"سایت‌های پایش‌شده",users:"کاربران",permissions:"نقش‌ها و دسترسی‌ها",coins:"مدیریت توکن"};
+  const loaders = {dashboard:loadDashboard,users:loadUsers,permissions:loadPermissions,coins:loadCoins,reports:loadReports,settings:loadSettings,systemSettings:loadSystemSettings,aiTokens:loadWallet};
+  const roleName = (r) => ({admin:"مدیر کل",manager:"مدیر",user:"کاربر"})[r] || r || "کاربر";
+  const allowed = (k) => !!me && (me.role === "admin" || !!(me.permissions && me.permissions[k] && me.permissions[k].view));
+  const canEdit = (k) => !!me && (me.role === "admin" || !!(me.permissions && me.permissions[k] && me.permissions[k].edit));
+  const setText = (key, value) => { const n=id(key); if(n) n.textContent = value == null ? "" : String(value); };
+  const setHTML = (key, value) => { const n=id(key); if(n) n.innerHTML=value; };
+  const dateText = (v, time) => { if(!v) return "—"; const d=new Date(v); return Number.isNaN(d.getTime())?"—":d.toLocaleString("fa-IR",time?{}:{dateStyle:"short"}); };
+  function busy(button, state, label) {
+    if(!button) return;
+    if(state) { if(button.dataset.oldText===undefined) button.dataset.oldText=button.textContent; button.disabled=true; if(label) button.textContent=label; }
+    else { button.disabled=false; if(button.dataset.oldText!==undefined) { button.textContent=button.dataset.oldText; delete button.dataset.oldText; } }
+  }
+  function submenu(force) {
+    const box=id("settingsSubnav"), trigger=$('#sideNav a[data-page="settings"]');
+    if(!box) return;
+    const open=typeof force==="boolean"?force:box.classList.contains("hidden");
+    box.classList.toggle("hidden",!open);
+    if(trigger) { trigger.setAttribute("aria-expanded",String(open)); trigger.classList.toggle("submenu-open",open); }
+  }
+  function renderPermissions() {
+    $$("#sideNav a[data-page]").forEach(a=>{
+      const visible=a.dataset.page==="settings"?allowed("settings"):allowed(a.dataset.page);
+      a.classList.toggle("hidden",!visible);
+      a.setAttribute("aria-hidden",String(!visible));
+      if(visible) a.removeAttribute("tabindex"); else a.tabIndex=-1;
+    });
+    const box=id("settingsSubnav");
+    if(box && !$$("a[data-page]",box).some(a=>!a.classList.contains("hidden"))) submenu(false);
+  }
+  function showPage(key, updateHash) {
+    const target=labels[key] && id(key+"Page") ? key : "dashboard";
+    if(target!=="dashboard" && !allowed(target)) { toast("برای مشاهده این بخش دسترسی ندارید."); return; }
+    $$(".page-section").forEach(s=>s.classList.toggle("hidden",s.id!==target+"Page"));
+    setText("pageTitle",labels[target]);
+    $$("#sideNav a[data-page]").forEach(a=>a.classList.toggle("active",a.dataset.page===target || (["users","permissions","systemSettings"].includes(target)&&a.dataset.page==="settings")));
+    if(["users","permissions","systemSettings"].includes(target)) submenu(true); else if(target!=="settings") submenu(false);
+    if(updateHash!==false && location.hash!=="#"+target) history.replaceState(null,"","#"+target);
+    if(loaders[target]) Promise.resolve(loaders[target]()).catch(e=>toast(e.message||"بارگذاری صفحه ناموفق بود."));
+  }
+  async function loadDashboard() {
+    setText("dashboardStatus","در حال دریافت اطلاعات...");
+    try {
+      const d=await api.get("/api/dashboard");
+      setText("usersTotal",num(d.users_total)); setText("coinsTotal",num(d.coins_total)); setText("coinsUsed",num(d.coins_used));
+      setText("productCount","—"); setText("sitesTotal","—");
+      const rows=Array.isArray(d.recent_transactions)?d.recent_transactions:[];
+      setHTML("recentTransactions",rows.length?rows.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+esc(t.reason)+"</td><td>"+dateText(t.created_at,false)+"</td></tr>").join(""):'<tr><td colspan="4" class="report-empty">هنوز تراکنشی ثبت نشده است.</td></tr>');
+      setText("lastUpdated",new Date().toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"})); setText("dashboardStatus","اطلاعات با موفقیت به‌روزرسانی شد");
+    } catch(e) { setText("dashboardStatus","دریافت اطلاعات ناموفق بود"); setHTML("recentTransactions",'<tr><td colspan="4" class="report-empty">دریافت اطلاعات ناموفق بود: '+esc(e.message)+'</td></tr>'); throw e; }
+  }
+  function renderReportRows(query) {
+    const body=id("reportTransactions"); if(!body) return;
+    const q=String(query||"").trim().toLocaleLowerCase("fa");
+    const rows=reportRows.filter(t=>[t.username,t.reason,t.amount,t.balance_after].some(v=>String(v??"").toLocaleLowerCase("fa").includes(q)));
+    body.innerHTML=rows.length?rows.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+num(t.balance_after)+"</td><td>"+esc(t.reason)+"</td><td>"+dateText(t.created_at,true)+"</td></tr>").join(""):'<tr><td colspan="5" class="report-empty">'+(reportRows.length?"موردی با این عبارت پیدا نشد.":"هنوز تراکنشی ثبت نشده است.")+'</td></tr>';
+  }
+  async function loadReports() {
+    if(!allowed("coins")) throw new Error("برای مشاهده گزارش‌ها دسترسی مدیریت توکن لازم است.");
+    setText("reportStatus","در حال دریافت...");
+    try {
+      const rows=await api.get("/api/coins/transactions"); reportRows=Array.isArray(rows)?rows:[];
+      setText("reportCount",num(reportRows.length));
+      setText("reportPositive",num(reportRows.filter(x=>Number(x.amount)>0).reduce((s,x)=>s+Number(x.amount),0)));
+      setText("reportNegative",num(Math.abs(reportRows.filter(x=>Number(x.amount)<0).reduce((s,x)=>s+Number(x.amount),0))));
+      setText("reportLatest",dateText(reportRows[0]?.created_at,false));
+      renderReportRows(id("reportSearch")?.value||""); setText("reportStatus",reportRows.length+" رکورد دریافت شد");
+    } catch(e) { setText("reportStatus","دریافت اطلاعات ناموفق بود"); setHTML("reportTransactions",'<tr><td colspan="5" class="report-empty">گزارش از سرور دریافت نشد: '+esc(e.message)+'</td></tr>'); throw e; }
+  }
+  async function loadUsers() {
+    const rows=await api.get("/api/users"), list=Array.isArray(rows)?rows:[];
+    id("addUserBtn")?.classList.toggle("hidden",!canEdit("users"));
+    setHTML("usersTable",list.length?list.map(u=>"<tr><td>"+esc(u.full_name)+"</td><td>"+esc(u.username)+"</td><td>"+roleName(u.role)+"</td><td>"+(u.is_active?"فعال":"غیرفعال")+"</td><td>"+num(u.coin_balance)+"</td></tr>").join(""):'<tr><td colspan="5" class="report-empty">کاربری ثبت نشده است.</td></tr>');
+    const select=id("coinUser");
+    if(select) select.innerHTML='<option value="">انتخاب کاربر</option>'+list.map(u=>'<option value="'+Number(u.id)+'">'+esc(u.full_name)+' ('+esc(u.username)+')</option>').join("");
+  }
+  async function loadPermissions() {
+    const data=await api.get("/api/permissions"), roles=data.roles||{}, box=id("permissionsContent"); if(!box) return;
+    box.innerHTML=Object.entries(roles).filter(([r])=>r!=="admin").map(([r,items])=>'<div class="role-block"><h4>'+roleName(r)+'</h4>'+(items||[]).map(p=>'<div class="permission-row"><span>'+esc(p.page_title)+'</span><label><input type="checkbox" data-role="'+esc(r)+'" data-page="'+esc(p.page_key)+'" data-kind="view" '+(p.can_view?"checked":"")+'> مشاهده</label><label><input type="checkbox" data-role="'+esc(r)+'" data-page="'+esc(p.page_key)+'" data-kind="edit" '+(p.can_edit?"checked":"")+'> ویرایش</label></div>').join("")+'</div>').join("");
+    $$("input[type=checkbox]",box).forEach(input=>{
+      input.disabled=!canEdit("permissions");
+      input.addEventListener("change",async()=>{
+        const row=input.closest(".role-block"), selector='[data-page="'+CSS.escape(input.dataset.page)+'"]';
+        const view=row.querySelector('[data-kind="view"]'+selector), edit=row.querySelector('[data-kind="edit"]'+selector);
+        if(edit.checked) view.checked=true;
+        try { await api.put("/api/permissions",{role:input.dataset.role,page_key:input.dataset.page,can_view:view.checked,can_edit:edit.checked}); toast("دسترسی ذخیره شد."); }
+        catch(e) { toast(e.message); await loadPermissions(); }
+      });
+    });
+  }
+  async function loadCoins() {
+    id("coinForm")?.classList.toggle("hidden",!canEdit("coins"));
+    const rows=await api.get("/api/coins/transactions"), list=Array.isArray(rows)?rows:[];
+    setHTML("coinsTable",list.length?list.map(t=>"<tr><td>"+esc(t.username)+"</td><td>"+num(t.amount)+"</td><td>"+num(t.balance_after)+"</td><td>"+esc(t.reason)+"</td><td>"+dateText(t.created_at,true)+"</td></tr>").join(""):'<tr><td colspan="5" class="report-empty">تراکنشی ثبت نشده است.</td></tr>');
+  }
+  async function loadSettings() {
+    $$("[data-settings-target]").forEach(b=>{const visible=allowed(b.dataset.settingsTarget); b.classList.toggle("hidden",!visible); b.disabled=!visible; b.onclick=()=>showPage(b.dataset.settingsTarget);});
+  }
+  async function loadSystemSettings() {
+    const d=await api.get("/api/system/config"), form=id("systemConfigForm"); if(!form) return;
+    Object.keys(d||{}).forEach(k=>{if(form.elements[k]) form.elements[k].value=d[k];});
+    form.querySelectorAll("input,select,button").forEach(el=>el.disabled=!canEdit("systemSettings"));
+  }
+  const money=(v,c)=>{const n=Number(v||0);return (Number.isFinite(n)?n:0).toLocaleString("en-US",{maximumFractionDigits:2})+(c==="USD"?" $":" ریال");};
+  function showBankCard() {
+    if(!walletConfig||!walletConfig.card_number) return;
+    setText("paymentBankName",walletConfig.bank_name||"بانک"); setText("paymentCardNumber",walletConfig.card_number);
+    setText("paymentCardHolder",walletConfig.card_holder||"صاحب کارت"); setText("paymentIban",walletConfig.iban?"شبا: "+walletConfig.iban:"");
+    setText("paymentBankDescription",walletConfig.bank_description||"پس از کارت‌به‌کارت، فیش پرداخت را ارسال کنید.");
+    const amount=Number(id("depositAmount")?.value||0), currency=id("depositCurrency")?.value||"IRR", rate=Number(walletConfig.usd_irr_rate||0);
+    setText("paymentAmountDue","مبلغ قابل پرداخت به کارت: "+money(activeDepositData?activeDepositData.amount_irr:(currency==="USD"?amount*rate:amount)));
+    id("bankPaymentPanel")?.classList.remove("hidden");
+  }
+  function updateDepositConversion() {
+    const amount=Number(id("depositAmount")?.value||0), currency=id("depositCurrency")?.value||"IRR", rate=Number(walletConfig?.usd_irr_rate||0);
+    if(id("depositConverted")) id("depositConverted").value=amount>0?(rate>0?money(currency==="IRR"?amount/rate:amount*rate,currency==="IRR"?"USD":"IRR"):"نرخ تبدیل توسط مدیر تنظیم نشده"):"";
+    if(amount>0&&walletConfig?.card_number) { showBankCard(); id("paymentDoneBtn")?.classList.remove("hidden"); if(id("paymentDoneBtn")) id("paymentDoneBtn").disabled=!activeDepositRequest; }
+    else if(!activeDepositRequest) id("bankPaymentPanel")?.classList.add("hidden");
+  }
+  const walletStatus=s=>({awaiting_payment:"در انتظار پرداخت",pending:"در انتظار تأیید",approved:"تأیید شد",rejected:"رد شد",withdrawal_pending:"در انتظار بررسی",withdrawal_approved:"برداشت تأیید شد",withdrawal_rejected:"برداشت رد شد"})[s]||s||"—";
+  async function loadWalletTables() {
+    const admin=me?.role==="admin";
+    const results=await Promise.all([api.get("/api/wallet/requests"),admin?api.get("/api/wallet/withdrawals"):Promise.resolve([])]);
+    const requests=Array.isArray(results[0])?results[0]:[], withdrawals=Array.isArray(results[1])?results[1]:[];
+    id("withdrawalReviewPanel")?.classList.toggle("hidden",!admin);
+    setHTML("withdrawalRequestsList",withdrawals.length?withdrawals.map(x=>'<article class="withdrawal-request-card"><div><b>'+esc(x.username)+'</b><small>'+dateText(x.created_at,true)+'</small></div><strong>'+money(x.amount_irr)+'</strong><p>'+esc(x.description)+'</p><span>'+walletStatus(x.status)+'</span>'+(x.status==="withdrawal_pending"?'<div class="withdrawal-request-actions"><button class="btn btn-primary withdrawal-approve" data-id="'+Number(x.id)+'" type="button">تأیید برداشت</button><button class="btn btn-soft withdrawal-reject" data-id="'+Number(x.id)+'" type="button">رد درخواست</button></div>':"")+'</article>').join(""):'<p class="report-empty">درخواست برداشتی برای بررسی وجود ندارد.</p>');
+    setHTML("depositRequestsTable",requests.length?requests.map(x=>{
+      const own=Number(x.user_id)===Number(me.id);
+      const actions=admin&&x.status==="pending"?'<button class="btn btn-primary deposit-approve" data-id="'+Number(x.id)+'" type="button">تأیید</button> <button class="btn btn-soft deposit-reject" data-id="'+Number(x.id)+'" type="button">رد</button>':(x.status==="awaiting_payment"&&own?'<button class="btn btn-soft continue-deposit" data-id="'+Number(x.id)+'" type="button">ادامه پرداخت</button>':"—");
+      return '<tr><td>'+esc(x.full_name||x.username)+'</td><td>'+money(x.entered_amount,x.currency)+'</td><td>'+walletStatus(x.status)+'</td><td>'+(x.proof_filename?'<button class="btn btn-soft proof-view" data-id="'+Number(x.id)+'" type="button">مشاهده فیش</button>':"—")+'</td><td>'+dateText(x.created_at,false)+'</td><td>'+actions+'</td></tr>';
+    }).join(""):'<tr><td colspan="6" class="report-empty">درخواستی ثبت نشده است.</td></tr>');
+    $$(".continue-deposit").forEach(b=>b.addEventListener("click",()=>{
+      const x=requests.find(r=>String(r.id)===b.dataset.id); if(!x) return;
+      activeDepositRequest=x.id; activeDepositData={amount_irr:x.amount_irr,amount_usd:x.amount_usd};
+      id("depositAmount").value=x.entered_amount; id("depositCurrency").value=x.currency;
+      id("depositAmount").disabled=true; id("depositCurrency").disabled=true; showBankCard();
+      id("paymentDoneBtn").classList.remove("hidden"); id("paymentDoneBtn").disabled=false; id("proofUploadForm").classList.add("hidden");
+    }));
+    $$(".deposit-approve").forEach(b=>b.addEventListener("click",()=>reviewDeposit(b.dataset.id,"approve")));
+    $$(".deposit-reject").forEach(b=>b.addEventListener("click",()=>reviewDeposit(b.dataset.id,"reject")));
+    $$(".withdrawal-approve").forEach(b=>b.addEventListener("click",()=>reviewWithdrawal(b.dataset.id,"approve")));
+    $$(".withdrawal-reject").forEach(b=>b.addEventListener("click",()=>reviewWithdrawal(b.dataset.id,"reject")));
+    $$(".proof-view").forEach(b=>b.addEventListener("click",async()=>{
+      let popup=null;
+      try {
+        popup=window.open("about:blank","_blank"); if(!popup) throw new Error("مرورگر بازشدن پنجره جدید را مسدود کرد.");
+        const response=await fetch(API_BASE+"/api/wallet/deposit-requests/"+b.dataset.id+"/proof",{headers:{Authorization:"Bearer "+localStorage.getItem("hidary_token")}});
+        if(!response.ok) {popup.close(); throw new Error("دریافت فیش ناموفق بود.");}
+        const url=URL.createObjectURL(await response.blob()); popup.location.href=url; setTimeout(()=>URL.revokeObjectURL(url),60000);
+      } catch(e) { if(popup&&!popup.closed) popup.close(); toast(e.message); }
+    }));
+  }
+  async function reviewDeposit(idValue,action) {
+    let reason=""; if(action==="reject") {reason=prompt("علت رد درخواست را وارد کنید:")||""; if(!reason.trim()) return;}
+    try {await api.post("/api/wallet/deposit-requests/"+encodeURIComponent(idValue)+"/review",{action,reason});toast("وضعیت درخواست ثبت شد.");await loadWallet();} catch(e){toast(e.message);}
+  }
+  async function reviewWithdrawal(idValue,action) {
+    let reason=""; if(action==="reject") {reason=prompt("علت رد برداشت را وارد کنید:")||""; if(!reason.trim()) return;}
+    try {await api.post("/api/wallet/withdrawals/"+encodeURIComponent(idValue)+"/review",{action,reason});toast("وضعیت برداشت ثبت شد.");await loadWallet();} catch(e){toast(e.message);}
+  }
+  async function loadWallet() {
+    const result=await Promise.all([api.get("/api/wallet"),api.get("/api/wallet/config")]), w=result[0]; walletConfig=result[1]||{};
+    setText("walletBalanceIrr",money(w.balance_irr)); setText("walletBalanceUsd",Number(w.usd_irr_rate)>0?money(w.balance_usd,"USD"):"نرخ تبدیل تنظیم نشده");
+    id("walletConfigPanel")?.classList.toggle("hidden",me.role!=="admin");
+    const form=id("walletConfigForm");
+    if(form) {Object.keys(walletConfig).forEach(k=>{if(form.elements[k])form.elements[k].value=walletConfig[k];});form.querySelectorAll("input,button").forEach(el=>el.disabled=me.role!=="admin");}
+    if(!activeDepositRequest) {if(id("depositAmount"))id("depositAmount").disabled=false;if(id("depositCurrency"))id("depositCurrency").disabled=false;}
+    updateDepositConversion(); await loadWalletTables();
+  }
+  function setTheme(dark) {
+    document.body.classList.toggle("theme-dark",!!dark);
+    const button=id("themeToggle");
+    if(button){button.setAttribute("aria-pressed",String(!!dark));button.setAttribute("aria-label",dark?"فعال‌سازی حالت روشن":"فعال‌سازی حالت تیره");button.title=dark?"حالت روشن":"حالت تیره";}
+    try{localStorage.setItem("hidary_theme",dark?"dark":"light");}catch(_){}
+  }
+  function closeUserMenu(){id("userMenu")?.classList.add("hidden");id("userMenuBtn")?.setAttribute("aria-expanded","false");}
+  function bindEvents() {
+    id("refreshDashboard")?.addEventListener("click",()=>loadDashboard().catch(e=>toast(e.message)));
+    id("sideNav")?.addEventListener("click",e=>{
+      const a=e.target.closest("a[data-page]"); if(!a||!id("sideNav").contains(a))return; e.preventDefault();
+      if(a.dataset.page==="settings"){submenu();showPage("settings");return;} showPage(a.dataset.page);
+    });
+    const search=id("menuSearch"), links=$$("#sideNav a[data-page]");
+    const filter=value=>{
+      const q=String(value||"").trim().toLocaleLowerCase("fa");
+      links.forEach(a=>a.classList.toggle("search-hidden",!!q&&!a.textContent.toLocaleLowerCase("fa").includes(q)));
+      if(q) submenu(true);
+    };
+    search?.addEventListener("input",e=>filter(e.target.value));
+    search?.addEventListener("keydown",e=>{
+      if(e.key==="Escape"){search.value="";filter("");search.blur();}
+      if(e.key==="Enter"){const first=links.find(a=>!a.classList.contains("search-hidden")&&!a.classList.contains("hidden")&&a.dataset.page!=="settings");if(first){showPage(first.dataset.page);search.value="";filter("");search.blur();}}
+    });
+    id("trendProductNav")?.addEventListener("change",e=>{if(e.target.value==="all")showPage("products");});
+    id("productKpiTile")?.addEventListener("click",e=>{e.preventDefault();showPage("products");});
+    id("reportSearch")?.addEventListener("input",e=>renderReportRows(e.target.value));
+    id("exportTransactions")?.addEventListener("click",()=>{
+      if(!reportRows.length){toast("داده‌ای برای خروجی وجود ندارد.");return;}
+      const quote=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+      const rows=[["کاربر","مقدار تغییر","موجودی پس از تراکنش","شرح","تاریخ"],...reportRows.map(t=>[t.username,t.amount,t.balance_after,t.reason,dateText(t.created_at,true)])];
+      const url=URL.createObjectURL(new Blob(["\uFEFF"+rows.map(r=>r.map(quote).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}));
+      const a=document.createElement("a");a.href=url;a.download="hidary-transactions.csv";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    });
+    id("systemConfigForm")?.addEventListener("submit",async e=>{e.preventDefault();try{await api.put("/api/system/config",Object.fromEntries(new FormData(e.currentTarget)));toast("تنظیمات ذخیره شد.");}catch(x){toast(x.message);}});
+    id("depositAmount")?.addEventListener("input",updateDepositConversion); id("depositCurrency")?.addEventListener("change",updateDepositConversion);
+    id("depositRequestForm")?.addEventListener("submit",async e=>{
+      e.preventDefault();const form=e.currentTarget,button=$('button[type="submit"]',form),amount=Number(id("depositAmount").value),currency=id("depositCurrency").value;
+      if(!Number.isFinite(amount)||amount<=0){toast("مبلغ معتبر وارد کنید.");return;}
+      busy(button,true,"در حال ثبت...");
+      try{const d=await api.post("/api/wallet/deposit-requests",{amount,currency});activeDepositRequest=d.id;activeDepositData={...d,currency,entered_amount:amount};id("depositAmount").disabled=true;id("depositCurrency").disabled=true;showBankCard();id("paymentDoneBtn").classList.remove("hidden");id("paymentDoneBtn").disabled=false;id("proofUploadForm").classList.add("hidden");toast("درخواست ثبت شد؛ پس از پرداخت فیش را ارسال کنید.");await loadWalletTables();}
+      catch(x){busy(button,false);toast(x.message);}
+    });
+    id("paymentDoneBtn")?.addEventListener("click",()=>{if(!activeDepositRequest){toast("ابتدا درخواست افزایش موجودی ثبت کنید.");return;}id("proofUploadForm")?.classList.remove("hidden");id("paymentProofFile")?.focus();});
+    id("proofUploadForm")?.addEventListener("submit",async e=>{
+      e.preventDefault();const form=e.currentTarget,file=id("paymentProofFile").files[0],button=$('button[type="submit"]',form);
+      if(!file||!activeDepositRequest){toast("فایل فیش را انتخاب کنید.");return;}if(file.size>5*1024*1024){toast("حجم فایل نباید بیشتر از ۵ مگابایت باشد.");return;}
+      const fd=new FormData();fd.append("file",file);busy(button,true,"در حال ارسال...");
+      try{await api.post("/api/wallet/deposit-requests/"+activeDepositRequest+"/proof",fd);toast("فیش ارسال شد و برای تأیید مدیر در صف قرار گرفت.");form.reset();form.classList.add("hidden");id("paymentDoneBtn").classList.add("hidden");id("bankPaymentPanel").classList.add("hidden");activeDepositRequest=null;activeDepositData=null;id("depositAmount").disabled=false;id("depositCurrency").disabled=false;const submit=$('#depositRequestForm button[type="submit"]');if(submit)submit.disabled=false;await loadWalletTables();}
+      catch(x){busy(button,false);toast(x.message);}
+    });
+    id("withdrawalForm")?.addEventListener("submit",async e=>{
+      e.preventDefault();const form=e.currentTarget,button=$('button[type="submit"]',form),amount=Number(id("withdrawalAmount").value),destination=id("withdrawalDestination").value.trim();
+      if(!Number.isFinite(amount)||amount<=0||destination.length<5){toast("مبلغ و شماره مقصد معتبر وارد کنید.");return;}
+      busy(button,true,"در حال ثبت...");
+      try{await api.post("/api/wallet/withdrawals",{amount_irr:amount,destination});toast("درخواست برداشت ثبت شد.");form.reset();await loadWallet();}
+      catch(x){toast(x.message);}finally{busy(button,false);}
+    });
+    id("walletConfigForm")?.addEventListener("submit",async e=>{
+      e.preventDefault();const form=e.currentTarget,button=$('button[type="submit"]',form);busy(button,true,"در حال ذخیره...");
+      try{await api.put("/api/wallet/config",Object.fromEntries(new FormData(form)));toast("اطلاعات کارت و نرخ تبدیل ذخیره شد.");await loadWallet();}
+      catch(x){toast(x.message);}finally{busy(button,false);}
+    });
+    id("logoutBtn")?.addEventListener("click",()=>{try{localStorage.removeItem("hidary_token");}catch(_){}location.replace("../login/");});
+    id("userMenuBtn")?.addEventListener("click",()=>{const menu=id("userMenu"),open=menu.classList.toggle("hidden")===false;id("userMenuBtn").setAttribute("aria-expanded",String(open));});
+    document.addEventListener("click",e=>{if(!e.target.closest(".profile-menu-wrap"))closeUserMenu();});
+    document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeUserMenu();submenu(false);}});
+    id("userSettingsLink")?.addEventListener("click",e=>{e.preventDefault();closeUserMenu();showPage("settings");});
+    id("themeToggle")?.addEventListener("click",()=>setTheme(!document.body.classList.contains("theme-dark")));
+    id("addUserBtn")?.addEventListener("click",()=>id("userForm")?.classList.toggle("hidden"));
+    id("userForm")?.addEventListener("submit",async e=>{
+      e.preventDefault();const form=e.currentTarget,button=$('button[type="submit"]',form);busy(button,true,"در حال ثبت...");
+      try{await api.post("/api/users",Object.fromEntries(new FormData(form)));form.reset();form.classList.add("hidden");toast("کاربر ایجاد شد.");await loadUsers();}
+      catch(x){toast(x.message);}finally{busy(button,false);}
+    });
+    id("coinForm")?.addEventListener("submit",async e=>{
+      e.preventDefault();const form=e.currentTarget,data=new FormData(form),button=$('button[type="submit"]',form),user_id=Number(data.get("user_id")),amount=Number(data.get("amount")),reason=String(data.get("reason")||"").trim();
+      if(!user_id||!Number.isInteger(amount)||amount===0||reason.length<2){toast("کاربر، مقدار صحیح و علت تراکنش را وارد کنید.");return;}
+      busy(button,true,"در حال ثبت...");
+      try{await api.post("/api/coins/adjust",{user_id,amount,reason});form.reset();toast("تراکنش ثبت شد.");await Promise.all([loadCoins(),loadUsers(),loadDashboard()]);}
+      catch(x){toast(x.message);}finally{busy(button,false);}
+    });
+  }
+  async function init() {
+    bindEvents();let theme="light";try{theme=localStorage.getItem("hidary_theme")||"light";}catch(_){}setTheme(theme==="dark");
+    try{
+      me=await api.get("/api/auth/me");if(!me||!me.id)throw new Error("اطلاعات حساب کاربری از سرور دریافت نشد.");
+      setText("userName",me.full_name||me.username);setText("userRole",roleName(me.role));setText("menuUserName",me.full_name||me.username);setText("menuUserRole",roleName(me.role));setText("todayLabel",new Date().toLocaleDateString("fa-IR"));
+      renderPermissions();
+      const requested=location.hash.replace(/^#/,""),initial=labels[requested]&&id(requested+"Page")?requested:"dashboard";
+      if(initial==="settings")submenu(true);showPage(initial,false);
+    }catch(e){toast(e.message||"ورود به داشبورد ناموفق بود.");}
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init,{once:true}); else init();
+})();

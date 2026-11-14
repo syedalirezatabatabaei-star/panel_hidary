@@ -57,6 +57,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      network: host
     container_name: panel-hidary-backend
     restart: unless-stopped
     environment:

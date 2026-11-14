@@ -1,0 +1,65 @@
+name: panel-hidary
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: panel-hidary-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in root .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-panel_hidary}
+      MYSQL_USER: ${MYSQL_USER:-panel_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in root .env}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+    volumes:
+      - panel_hidary_mysql_data:/var/lib/mysql
+    networks:
+      - shared_network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'mysqladmin ping -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" --silent'
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    stop_grace_period: 1m
+
+  postgres:
+    image: postgres:17
+    container_name: panel-hidary-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-panel_hidary_analytics}
+      POSTGRES_USER: ${POSTGRES_USER:-panel_analytics}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in root .env}
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - panel_hidary_postgres_data:/var/lib/postgresql/data
+    networks:
+      - shared_network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    stop_grace_period: 1m
+
+networks:
+  shared_network:
+    external: true
+    name: shared_network
+
+volumes:
+  panel_hidary_mysql_data:
+    name: panel_hidary_mysql_data
+  panel_hidary_postgres_data:
+    name: panel_hidary_postgres_data

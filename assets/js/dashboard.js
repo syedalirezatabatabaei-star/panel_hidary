@@ -25,7 +25,8 @@
     if(trigger) { trigger.setAttribute("aria-expanded",String(open)); trigger.classList.toggle("submenu-open",open); }
   }
   function renderPermissions() {
-    $$("#sideNav a[data-page]").forEach(a=>{
+    id("userSettingsLink")?.classList.toggle("hidden",!allowed("settings"));
+    $("#sideNav a[data-page]").forEach(a=>{
       const visible=a.dataset.page==="settings"?allowed("settings"):allowed(a.dataset.page);
       a.classList.toggle("hidden",!visible);
       a.setAttribute("aria-hidden",String(!visible));
@@ -89,6 +90,7 @@
         const row=input.closest(".role-block"), selector='[data-page="'+CSS.escape(input.dataset.page)+'"]';
         const view=row.querySelector('[data-kind="view"]'+selector), edit=row.querySelector('[data-kind="edit"]'+selector);
         if(edit.checked) view.checked=true;
+        if(input.dataset.kind==="view" && !view.checked) edit.checked=false;
         try { await api.put("/api/permissions",{role:input.dataset.role,page_key:input.dataset.page,can_view:view.checked,can_edit:edit.checked}); toast("دسترسی ذخیره شد."); }
         catch(e) { toast(e.message); await loadPermissions(); }
       });

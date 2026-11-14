@@ -18,3 +18,34 @@
 
 ## پیش از انتشار
 HTTPS، SECRET_KEY تصادفی و محرمانه، رمز قوی مدیر، محدودسازی CORS، rate limit ورود، مدیریت انقضای نشست و پشتیبان‌گیری دیتابیس را پیکربندی کنید. این نسخه اسکلت اولیه است و پیش از production باید تست امنیتی و عملکردی شود.
+
+## Running databases with Docker Compose
+
+Copy `.env.example` to `.env` in the repository root and replace all placeholder passwords with strong random values:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+The external Docker network `shared_network` must exist. Create it if needed:
+
+```bash
+docker network create --driver bridge shared_network
+```
+
+Start the databases:
+
+```bash
+docker compose up -d
+docker compose ps
+```
+
+- MySQL: `panel-hidary-mysql:3306`, database `panel_hidary`
+- PostgreSQL: `panel-hidary-postgres:5432`, database `panel_hidary_analytics`
+- MySQL data volume: `panel_hidary_mysql_data`
+- PostgreSQL data volume: `panel_hidary_postgres_data`
+
+Database ports are not published on the host. Containers attached to `shared_network` connect using the service container names. Never commit `.env`.
+
+The backend environment file `backend/.env` is separate. If the backend runs inside Docker on `shared_network`, its MySQL `DATABASE_URL` hostname must be `panel-hidary-mysql`, not `127.0.0.1`.

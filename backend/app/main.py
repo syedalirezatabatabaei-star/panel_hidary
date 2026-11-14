@@ -435,7 +435,7 @@ def list_withdrawals(user:User=Depends(current_user),db:Session=Depends(get_db))
 
 @app.post("/api/wallet/deposit-requests/{request_id}/review")
 def review_wallet_request(request_id:int,data:WalletReviewInput,request:Request,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
-    row=db.get(WalletRequest,request_id)
+    row=db.query(WalletRequest).filter(WalletRequest.id==request_id).with_for_update().one_or_none()
     if not row: raise HTTPException(404,"درخواست پیدا نشد")
     if row.status!="pending": raise HTTPException(400,"این درخواست قبلاً بررسی شده یا فیش ندارد")
     if data.action not in ("approve","reject"): raise HTTPException(400,"عملیات نامعتبر است")
@@ -450,7 +450,7 @@ def review_wallet_request(request_id:int,data:WalletReviewInput,request:Request,
 
 @app.post("/api/wallet/withdrawals/{transaction_id}/review")
 def review_withdrawal(transaction_id:int,data:WalletReviewInput,request:Request,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
-    row=db.get(WalletTransaction,transaction_id)
+    row=db.query(WalletTransaction).filter(WalletTransaction.id==transaction_id).with_for_update().one_or_none()
     if not row or row.transaction_type!="withdrawal_pending": raise HTTPException(404,"درخواست برداشت پیدا نشد")
     if data.action not in ("approve","reject"): raise HTTPException(400,"عملیات نامعتبر است")
     w=wallet_for(db,row.user_id)

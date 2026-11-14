@@ -122,7 +122,10 @@ def login(request:Request,response:Response,form:OAuth2PasswordRequestForm=Depen
     return {"success":True,"token_type":"cookie"}
 
 @app.post("/api/auth/logout")
-def logout(response:Response):
+def logout(response:Response,request:Request,user:User=Depends(current_user),db:Session=Depends(get_db)):
+    user.session_version=(user.session_version or 0)+1
+    audit_event(db,"auth.logout",actor=user,target_user_id=user.id,request=request)
+    db.commit()
     response.delete_cookie("hidary_session",path="/",secure=settings.cookie_secure,httponly=True,samesite="strict")
     return {"success":True}
 @app.get("/api/auth/me")

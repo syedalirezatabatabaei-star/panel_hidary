@@ -21,6 +21,15 @@ class PagePermission(Base):
     page_key:Mapped[str]=mapped_column(String(60))
     can_view:Mapped[bool]=mapped_column(Boolean,default=False)
     can_edit:Mapped[bool]=mapped_column(Boolean,default=False)
+
+class UserPagePermission(Base):
+    __tablename__="user_page_permissions"
+    __table_args__=(UniqueConstraint("user_id","page_key",name="uq_user_page"),)
+    id:Mapped[int]=mapped_column(Integer,primary_key=True)
+    user_id:Mapped[int]=mapped_column(ForeignKey("users.id",ondelete="CASCADE"),index=True)
+    page_key:Mapped[str]=mapped_column(String(60))
+    can_view:Mapped[bool]=mapped_column(Boolean,default=False)
+    can_edit:Mapped[bool]=mapped_column(Boolean,default=False)
 class CoinTransaction(Base):
     __tablename__="coin_transactions"
     id:Mapped[int]=mapped_column(Integer,primary_key=True)

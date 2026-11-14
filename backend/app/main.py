@@ -141,8 +141,9 @@ def dashboard(user:User=Depends(require_page("dashboard")),db:Session=Depends(ge
 def users(user:User=Depends(require_page("users")),db:Session=Depends(get_db)):
     return [{"id":u.id,"username":u.username,"full_name":u.full_name,"role":u.role,"is_active":u.is_active,"coin_balance":u.coin_balance} for u in db.query(User).order_by(User.id.desc()).all()]
 @app.post("/api/users",status_code=201)
-def create_user(data:UserCreate,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
+def create_user(data:UserCreate,request:Request,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
     if data.role not in DEFAULTS: raise HTTPException(400,"نقش نامعتبر است")
+    if data.role=="admin" and actor.role!="admin": raise HTTPException(403,"ایجاد مدیر کل فقط توسط مدیر کل مجاز است")
     if db.query(User).filter_by(username=data.username).first(): raise HTTPException(409,"نام کاربری تکراری است")
     u=User(username=data.username,full_name=data.full_name,role=data.role,password_hash=hash_password(data.password)); db.add(u); db.flush()
     role_defaults=DEFAULTS.get(data.role,DEFAULTS["user"])
@@ -152,17 +153,32 @@ def create_user(data:UserCreate,actor:User=Depends(require_page("users",True)),d
     db.commit(); db.refresh(u)
     return {"id":u.id,"username":u.username}
 @app.patch("/api/users/{uid}")
-def update_user(uid:int,data:UserUpdate,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
+def update_user(uid:int,data:UserUpdate,request:Request,actor:User=Depends(require_page("users",True)),db:Session=Depends(get_db)):
     u=db.get(User,uid)
     if not u: raise HTTPException(404,"کاربر پیدا نشد")
-    if u.id==actor.id and data.is_active is False: raise HTTPException(400,"نمی‌توانید حساب خود را غیرفعال کنید")
+    if u.role=="admin" and actor.role!="admin": raise HTTPException(403,"مدیر میانی اجازه تغییر حساب مدیر کل را ندارد")
     if data.role is not None:
         if data.role not in DEFAULTS: raise HTTPException(400,"نقش نامعتبر است")
+        if data.role=="admin" and actor.role!="admin": raise HTTPException(403,"ارتقای حساب به مدیر کل فقط توسط مدیر کل مجاز است")
+        if u.role=="admin" and data.role!="admin": raise HTTPException(403,"تغییر نقش مدیر کل از این مسیر مجاز نیست")
+    if u.id==actor.id and data.is_active is False: raise HTTPException(400,"نمی‌توانید حساب خود را غیرفعال کنید")
+    role_changed=data.role is not None and data.role!=u.role
+    revoke=role_changed or bool(data.password) or (data.is_active is not None and data.is_active!=u.is_active)
+    if role_changed:
         u.role=data.role
+        db.query(UserPagePermission).filter_by(user_id=u.id).delete(synchronize_session=False)
+        if u.role!="admin":
+            defaults=DEFAULTS.get(u.role,DEFAULTS["user"])
+            for key in PAGES:
+                view,edit=defaults.get(key,(False,False))
+                db.add(UserPagePermission(user_id=u.id,page_key=key,can_view=view,can_edit=edit))
     if data.full_name is not None: u.full_name=data.full_name
     if data.is_active is not None: u.is_active=data.is_active
     if data.password: u.password_hash=hash_password(data.password)
-    db.commit(); return {"success":True}
+    if revoke: u.session_version=(u.session_version or 0)+1
+    audit_event(db,"user.updated",actor=actor,target_user_id=u.id,request=request,details={"role":u.role,"role_changed":role_changed,"password_changed":bool(data.password),"active":u.is_active})
+    db.commit()
+    return {"success":True,"sessions_revoked":revoke}
 @app.get("/api/permissions")
 def permissions(user_id:int|None=None,actor:User=Depends(current_user),db:Session=Depends(get_db)):
     if actor.role!="admin": raise HTTPException(403,"فقط مدیر کل می‌تواند دسترسی کاربران را مدیریت کند")

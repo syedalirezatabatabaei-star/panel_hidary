@@ -312,7 +312,8 @@ def create_wallet_request(data:WalletRequestInput,user:User=Depends(current_user
     amount_irr=data.amount if currency=="IRR" else data.amount*rate
     amount_usd=data.amount if currency=="USD" else data.amount/rate
     fee_percent=Decimal(setting(db,"exchange_fee_percent","0.5") or "0.5")
-    fee_irr=(amount_irr*fee_percent/Decimal("100")).quantize(Decimal("0.01"),rounding=ROUND_HALF_UP)
+    # Exchange commission is charged only when the customer converts USD to IRR.
+    fee_irr=(amount_irr*fee_percent/Decimal("100")).quantize(Decimal("0.01"),rounding=ROUND_HALF_UP) if currency=="USD" else Decimal("0.00")
     total_payable_irr=amount_irr+fee_irr
     row=WalletRequest(user_id=user.id,entered_currency=currency,entered_amount=data.amount,amount_irr=amount_irr,
       amount_usd=amount_usd,fx_rate=rate,fee_percent=fee_percent,fee_irr=fee_irr,
@@ -393,7 +394,7 @@ def review_withdrawal(transaction_id:int,data:WalletReviewInput,actor:User=Depen
 def get_wallet_config(user:User=Depends(current_user),db:Session=Depends(get_db)):
     return {"usd_irr_rate":setting(db,"usd_irr_rate","0"),"fx_auto_enabled":(setting(db,"fx_auto_enabled","true").lower() in ("true","1","yes","on")),
       "fx_updated_at":setting(db,"fx_updated_at",""),"fx_status":setting(db,"fx_status","waiting"),"fx_source":setting(db,"fx_source","TGJU"),
-      "fx_last_error":setting(db,"fx_last_error",""),"exchange_fee_percent":setting(db,"exchange_fee_percent","0.5"),
+      "fx_last_error":setting(db,"fx_last_error","") if user.role=="admin" else "","exchange_fee_percent":setting(db,"exchange_fee_percent","0.5"),
       "bank_name":setting(db,"bank_name",""),"card_holder":setting(db,"card_holder",""),"card_number":setting(db,"card_number",""),"iban":setting(db,"iban",""),"bank_description":setting(db,"bank_description","")}
 
 @app.put("/api/wallet/config")

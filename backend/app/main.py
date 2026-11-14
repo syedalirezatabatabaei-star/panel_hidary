@@ -270,7 +270,7 @@ class WalletReviewInput(BaseModel):
     action:str
     reason:str|None=None
 class WalletConfigInput(BaseModel):
-    usd_irr_rate:Decimal=Field(gt=0)
+    usd_irr_rate:Decimal=Field(default=Decimal("0"),ge=0)
     fx_auto_enabled:bool=True
     exchange_fee_percent:Decimal=Field(default=Decimal("0.5"),ge=0,le=100)
     bank_name:str=Field(max_length=120)
@@ -399,7 +399,11 @@ def get_wallet_config(user:User=Depends(current_user),db:Session=Depends(get_db)
 @app.put("/api/wallet/config")
 def update_wallet_config(data:WalletConfigInput,actor:User=Depends(wallet_admin),db:Session=Depends(get_db)):
     values=data.model_dump()
+    if not values["fx_auto_enabled"] and values["usd_irr_rate"]<=0:
+        raise HTTPException(400,"در حالت دستی باید نرخ دلار بزرگ‌تر از صفر باشد")
     for k,v in values.items():
+        if k=="usd_irr_rate" and values["fx_auto_enabled"] and v<=0:
+            continue
         set_setting(db,k,("true" if v else "false") if isinstance(v,bool) else v)
     set_setting(db,"fx_status","manual" if not values["fx_auto_enabled"] else "waiting")
     db.commit();return {"success":True}

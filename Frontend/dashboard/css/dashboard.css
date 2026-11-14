@@ -202,3 +202,7 @@ th,td{font-size:13px}
   th,td{font-size:12px}
   .form-grid input,.form-grid select,.form-grid textarea{font-size:13px}
 }
+.permission-user-picker{display:flex;align-items:center;gap:12px;max-width:520px;margin:18px 0;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--page)}
+.permission-user-picker label{font-size:13px;color:var(--muted);white-space:nowrap}
+.permission-user-picker select{width:100%;min-height:42px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text)}
+@media(max-width:600px){.permission-user-picker{align-items:stretch;flex-direction:column}}
